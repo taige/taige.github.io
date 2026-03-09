@@ -1,5 +1,5 @@
 name: AI 解锁状态检测
-icon: https://cdn.jsdelivr.net/gh/taige/taige.github.io@master/chatgpt.png
+icon: https://cdn.jsdelivr.net/gh/taige/taige.github.io@master/github_copilot.png
 desc: 在 Stash 首页折叠卡片中直观显示 ChatGPT、Claude、Gemini 的当前解锁状态
 
 tiles:
