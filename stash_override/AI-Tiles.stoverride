@@ -1,0 +1,39 @@
+name: AI 解锁状态检测
+icon: https://cdn.jsdelivr.net/gh/taige/taige.github.io@master/github_copilot.png
+desc: 在 Stash 首页折叠卡片中直观显示 ChatGPT、Claude、Gemini 的当前解锁状态
+
+tiles:
+  - name: Check_ChatGPT
+    title: "🤖 ChatGPT"
+    content: "检测中..."
+    icon: "waveform.path.ecg"
+    backgroundColor: "#10A37F"
+    interval: 86400
+    collapsed: true
+
+  - name: Check_Claude
+    title: "🧠 Claude"
+    content: "检测中..."
+    icon: "brain.head.profile"
+    backgroundColor: "#D97757"
+    interval: 86400
+    collapsed: true
+
+  - name: Check_Gemini
+    title: "✨ Gemini"
+    content: "检测中..."
+    icon: "sparkles"
+    backgroundColor: "#1A73E8"
+    interval: 86400
+    collapsed: true
+
+script-providers:
+  Check_ChatGPT:
+    url: https://cdn.jsdelivr.net/gh/taige/taige.github.io@master/stash_js/chatgpt.js
+    interval: 86400
+  Check_Claude:
+    url: https://cdn.jsdelivr.net/gh/taige/taige.github.io@master/stash_js/claude.js
+    interval: 86400
+  Check_Gemini:
+    url: https://cdn.jsdelivr.net/gh/taige/taige.github.io@master/stash_js/gemini.js
+    interval: 86400
