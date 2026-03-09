@@ -1,5 +1,5 @@
 name: AI 解锁状态检测
-icon: https://cdn.jsdelivr.net/gh/taige/taige.github.io@master/github_copilot.png
+icon: https://cdn.jsdelivr.net/gh/taige/taige.github.io@master/chatgpt.png
 desc: 在 Stash 首页折叠卡片中直观显示 ChatGPT、Claude、Gemini 的当前解锁状态
 
 tiles:
@@ -10,6 +10,7 @@ tiles:
     backgroundColor: "#10A37F"
     interval: 86400
     collapsed: true
+    url: "https://chatgpt.com"
 
   - name: Check_Claude
     title: "🧠 Claude"
@@ -18,6 +19,7 @@ tiles:
     backgroundColor: "#D97757"
     interval: 86400
     collapsed: true
+    url: "https://claude.ai"
 
   - name: Check_Gemini
     title: "✨ Gemini"
@@ -26,6 +28,7 @@ tiles:
     backgroundColor: "#1A73E8"
     interval: 86400
     collapsed: true
+    url: "https://gemini.google.com"
 
 script-providers:
   Check_ChatGPT:
