@@ -24,7 +24,7 @@ async function main() {
     return;
   }
 
-  if (body.includes("ad-free")) {
+  if (body.includes("ad-free") || body.includes("adfree")) {
     const match = data.match(/"GL"\s*:\s*"([A-Z]{2})"/);
     const country = match ? " (" + match[1] + ")" : "";
     $done({ content: "Available" + country, backgroundColor: "#FF0000" });
