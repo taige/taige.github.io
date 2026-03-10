@@ -8,7 +8,6 @@ tiles:
     content: "检测中..."
     icon: "waveform.path.ecg"
     backgroundColor: "#10A37F"
-    interval: 86400
     collapsed: true
     url: "https://chatgpt.com"
 
@@ -17,7 +16,6 @@ tiles:
     content: "检测中..."
     icon: "brain.head.profile"
     backgroundColor: "#D97757"
-    interval: 86400
     collapsed: true
     url: "https://claude.ai"
 
@@ -26,7 +24,6 @@ tiles:
     content: "检测中..."
     icon: "sparkles"
     backgroundColor: "#1A73E8"
-    interval: 86400
     collapsed: true
     url: "https://gemini.google.com"
 

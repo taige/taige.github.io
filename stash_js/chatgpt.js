@@ -7,10 +7,7 @@ async function request(method, params) {
 }
 
 async function main() {
-  const { error, response, data } = await request("GET", {
-    url: "https://api.openai.com/compliance/cookie_requirements",
-    timeout: 5000
-  });
+  const { error, response, data } = await request("GET", "https://api.openai.com/compliance/cookie_requirements");
 
   if (error) {
     $done({ title: "🤖 ChatGPT", content: "Network Error", backgroundColor: "#FF3B30", icon: "waveform.path.ecg" });
@@ -26,5 +23,9 @@ async function main() {
 }
 
 (async () => {
-  main().catch(() => $done({}));
+  main()
+    .then((_) => {})
+    .catch((error) => {
+      $done({});
+    });
 })();
