@@ -1,5 +1,5 @@
 name: 流媒体解锁状态检测
-icon: https://cdn.jsdelivr.net/gh/taige/taige.github.io@master/github_copilot.png
+icon: "play.tv"
 desc: 在 Stash 首页折叠卡片中直观显示 YouTube、Netflix 的当前解锁状态
 
 tiles:
