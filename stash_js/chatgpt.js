@@ -13,12 +13,12 @@ async function main() {
   );
 
   if (error) {
-    $done({ content: "Network Error", backgroundColor: "" });
+    $done({ content: "Network Error", backgroundColor: "#FF9500" });
     return;
   }
 
   if (data && data.toLowerCase().includes("unsupported_country")) {
-    $done({ content: "Blocked", backgroundColor: "" });
+    $done({ content: "Blocked", backgroundColor: "#FF9500" });
     return;
   }
 

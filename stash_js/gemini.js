@@ -16,14 +16,14 @@ async function main() {
   });
 
   if (error) {
-    $done({ content: "Network Error", backgroundColor: "" });
+    $done({ content: "Network Error", backgroundColor: "#FF9500" });
     return;
   }
 
   const status = response.status || response.statusCode;
 
   if (status === 403) {
-    $done({ content: "Blocked", backgroundColor: "" });
+    $done({ content: "Blocked", backgroundColor: "#FF9500" });
     return;
   }
 
@@ -32,7 +32,7 @@ async function main() {
     return;
   }
 
-  $done({ content: "Unknown (" + status + ")", backgroundColor: "" });
+  $done({ content: "Unknown (" + status + ")", backgroundColor: "#FF9500" });
 }
 
 (async () => {

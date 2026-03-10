@@ -51,7 +51,7 @@ async function main() {
     return;
   }
 
-  $done({ content: "Not Available", backgroundColor: "" });
+  $done({ content: "Not Available", backgroundColor: "#FF9500" });
 }
 
 (async () => {
