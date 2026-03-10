@@ -9,7 +9,7 @@ async function request(method, params) {
 async function main() {
   const { error, response, data } = await request(
     "GET",
-    "https://m.youtube.com/premium"
+    "https://www.youtube.com/premium"
   );
 
   if (error) {
@@ -17,21 +17,22 @@ async function main() {
     return;
   }
 
+  const status = response.status || response.statusCode;
   const body = (data || "").toLowerCase();
 
-  if (body.includes("youtube premium is not available in your country")) {
+  if (status !== 200 || body.length < 1000) {
+    $done({ content: "Error (" + status + ")", backgroundColor: "#FF9500" });
+    return;
+  }
+
+  if (body.includes("not available in your country")) {
     $done({ content: "Not Available", backgroundColor: "#FF9500" });
     return;
   }
 
-  if (body.includes("ad-free") || body.includes("adfree")) {
-    const match = data.match(/"GL"\s*:\s*"([A-Z]{2})"/i);
-    const country = match ? " (" + match[1] + ")" : "";
-    $done({ content: "Available" + country, backgroundColor: "#FF0000" });
-    return;
-  }
-
-  $done({ content: "Unknown Error", backgroundColor: "#FF9500" });
+  const match = data.match(/"GL"\s*:\s*"([A-Z]{2})"/i);
+  const country = match ? " (" + match[1] + ")" : "";
+  $done({ content: "Available" + country, backgroundColor: "#FF0000" });
 }
 
 (async () => {
