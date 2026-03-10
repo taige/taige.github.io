@@ -1,0 +1,28 @@
+name: 流媒体解锁状态检测
+icon: https://cdn.jsdelivr.net/gh/taige/taige.github.io@master/github_copilot.png
+desc: 在 Stash 首页折叠卡片中直观显示 YouTube、Netflix 的当前解锁状态
+
+tiles:
+  - name: Check_YouTube
+    title: "▶️ YouTube"
+    content: "检测中..."
+    icon: https://fastly.jsdelivr.net/gh/StashNetworks/misc@main/collapsed-tiles/img/youtube.png
+    backgroundColor: "#FF0000"
+    collapsed: true
+    url: "https://www.youtube.com"
+
+  - name: Check_Netflix
+    title: "🎬 Netflix"
+    content: "检测中..."
+    icon: https://fastly.jsdelivr.net/gh/StashNetworks/misc@main/collapsed-tiles/img/netflix.png
+    backgroundColor: "#E50914"
+    collapsed: true
+    url: "https://www.netflix.com"
+
+script-providers:
+  Check_YouTube:
+    url: https://raw.githubusercontent.com/taige/taige.github.io/refs/heads/master/stash_js/youtube.js
+    interval: 86400
+  Check_Netflix:
+    url: https://raw.githubusercontent.com/taige/taige.github.io/refs/heads/master/stash_js/netflix.js
+    interval: 86400

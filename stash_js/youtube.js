@@ -9,7 +9,7 @@ async function request(method, params) {
 async function main() {
   const { error, response, data } = await request(
     "GET",
-    "https://api.openai.com/compliance/cookie_requirements"
+    "https://www.youtube.com/premium"
   );
 
   if (error) {
@@ -17,12 +17,19 @@ async function main() {
     return;
   }
 
-  if (data && data.toLowerCase().includes("unsupported_country")) {
-    $done({ content: "Blocked", backgroundColor: "" });
+  const body = (data || "").toLowerCase();
+
+  if (body.includes("youtube premium is not available in your country")) {
+    $done({ content: "Not Available", backgroundColor: "" });
     return;
   }
 
-  $done({ content: "Available", backgroundColor: "#10A37F" });
+  if (body.includes("ad-free")) {
+    $done({ content: "Available", backgroundColor: "#FF0000" });
+    return;
+  }
+
+  $done({ content: "Unknown Error", backgroundColor: "" });
 }
 
 (async () => {
