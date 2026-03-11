@@ -29,11 +29,11 @@ tiles:
 
 script-providers:
   Check_ChatGPT:
-    url: https://raw.githubusercontent.com/taige/taige.github.io/refs/heads/master/stash_js/chatgpt.js
+    url: https://fastly.jsdelivr.net/gh/taige/taige.github.io@master/stash_js/chatgpt.js
     interval: 86400
   Check_Claude:
-    url: https://raw.githubusercontent.com/taige/taige.github.io/refs/heads/master/stash_js/claude.js
+    url: https://fastly.jsdelivr.net/gh/taige/taige.github.io@master/stash_js/claude.js
     interval: 86400
   Check_Gemini:
-    url: https://raw.githubusercontent.com/taige/taige.github.io/refs/heads/master/stash_js/gemini.js
+    url: https://fastly.jsdelivr.net/gh/taige/taige.github.io@master/stash_js/gemini.js
     interval: 86400
