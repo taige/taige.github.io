@@ -1,0 +1,15 @@
+name: Fraud Score Check
+icon: https://ippure.com/logo.png
+desc: 提供本地 HTTP 接口，通过指定节点查询 IP fraud score
+
+http:
+  script:
+    - match: ^http://fraud-check\.local/
+      name: fraud-score-proxy-inject
+      type: request
+      timeout: 15
+
+script-providers:
+  fraud-score-proxy-inject:
+    url: https://raw.githubusercontent.com/taige/taige.github.io/master/stash_js/fraud_score_proxy_inject.js
+    interval: 86400
