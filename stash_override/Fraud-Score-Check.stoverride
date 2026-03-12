@@ -9,9 +9,10 @@ http:
   mitm:
     - fraud-check.stash
   script:
-    - match: ^http://fraud-check\.stash/
+    - match: ^https?:\/\/fraud-check\.stash
       name: fraud-score-proxy-inject
       type: request
+      require-body: true
       timeout: 15
 
 script-providers:
