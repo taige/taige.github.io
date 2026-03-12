@@ -10,6 +10,7 @@ FRAUD_WEIGHT=0.6
 DELAY_WEIGHT=0.4
 AUTO_SELECT=false
 SELECT_GROUP=""
+REQ_TIMEOUT=3
 
 urlencode() {
   python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$1"
@@ -63,6 +64,7 @@ Options:
   -t, --threshold N         Skip nodes with fraud score >= N (default: 70)
   -fw, --fraud-weight F     Weight for fraud score component (default: 0.6)
   -dw, --delay-weight F     Weight for delay component (default: 0.4)
+  --timeout N               Request timeout in seconds (default: 3)
   -h, --help                Show this help
 EOF
   exit 0
@@ -77,6 +79,7 @@ while [[ $# -gt 0 ]]; do
     -t|--threshold)   FRAUD_THRESHOLD="$2"; shift 2 ;;
     -fw|--fraud-weight)  FRAUD_WEIGHT="$2"; shift 2 ;;
     -dw|--delay-weight)  DELAY_WEIGHT="$2"; shift 2 ;;
+    --timeout)        REQ_TIMEOUT="$2"; shift 2 ;;
     -h|--help)        usage ;;
     -*)               echo "Unknown option: $1"; usage ;;
     *)
@@ -138,7 +141,7 @@ while IFS= read -r node; do
   printf "[%d/%d] Testing: %s ... " "$INDEX" "$NODE_COUNT" "$node"
 
   NODE_ENCODED=$(urlencode "$node")
-  RESP=$(curl -s --max-time 15 "${CHECK_URL}?node=${NODE_ENCODED}" 2>/tmp/fraud-check-curl.log || echo "")
+  RESP=$(curl -s --max-time $((REQ_TIMEOUT + 2)) "${CHECK_URL}?node=${NODE_ENCODED}&timeout=${REQ_TIMEOUT}" 2>/tmp/fraud-check-curl.log || echo "")
 
   if [[ -z "$RESP" ]] && [[ -f /tmp/fraud-check-curl.log ]]; then
     ERR=$(cat /tmp/fraud-check-curl.log)

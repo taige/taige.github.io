@@ -6,6 +6,8 @@
 const url = $request.url || "";
 const match = url.match(/[?&]node=([^&]+)/);
 const node = match ? decodeURIComponent(match[1]) : "";
+const timeoutMatch = url.match(/[?&]timeout=(\d+)/);
+const timeout = timeoutMatch ? parseInt(timeoutMatch[1]) : 3;
 console.log("[fraud-check] url=" + url + " node=" + (node || "(empty)"));
 console.log("[ippure] fetching https://my.ippure.com/v1/info via proxy=" + node);
 
@@ -22,7 +24,7 @@ if (!node) {
   $httpClient.get(
     {
       url: "https://my.ippure.com/v1/info",
-      timeout: 15,
+      timeout: timeout,
       headers: {
         "X-Stash-Selected-Proxy": encodeURIComponent(node),
       },
