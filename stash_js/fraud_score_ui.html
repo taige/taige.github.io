@@ -95,8 +95,52 @@ select, input[type="number"] {
   transition: border-color 0.2s;
 }
 
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2333ff66' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
 select:focus, input:focus {
   border-color: var(--fg-dim);
+}
+
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--fg);
+  border-color: var(--fg);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 5px;
+  height: 9px;
+  border: solid var(--bg);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+input[type="checkbox"]:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 input[type="number"] { width: 80px; flex: none; }
@@ -282,6 +326,16 @@ input[type="number"] { width: 80px; flex: none; }
       <input type="number" id="timeout" value="3" min="1" max="30">
       <label>THRESH</label>
       <input type="number" id="threshold" value="70" min="0" max="100">
+      <label>F.W</label>
+      <input type="number" id="fraudWeight" value="0.6" min="0" max="1" step="0.1">
+      <label>D.W</label>
+      <input type="number" id="delayWeight" value="0.4" min="0" max="1" step="0.1">
+    </div>
+    <div class="control-row">
+      <label>SELECT</label>
+      <input type="checkbox" id="autoSelect" disabled>
+      <label>SEL.GROUP</label>
+      <select id="selectGroup"><option value="">--</option></select>
       <button class="btn" id="startBtn" onclick="startCheck()" disabled>Start</button>
       <button class="btn btn-stop" id="stopBtn" onclick="stopCheck()" style="display:none">Stop</button>
     </div>
@@ -328,23 +382,57 @@ async function loadGroups() {
   try {
     const resp = await fetch(apiBase() + '/proxies');
     allProxies = await resp.json();
+
+    // Fill GROUP dropdown (all groups with .all)
     const sel = document.getElementById('group');
     sel.innerHTML = '';
-    const groups = Object.entries(allProxies.proxies)
-      .filter(([_, v]) => v.all)
-      .sort(([a], [b]) => a.localeCompare(b));
+    const groups = Object.entries(allProxies.proxies).filter(([_, v]) => v.all);
     groups.forEach(([name, v]) => {
       const opt = document.createElement('option');
       opt.value = name;
       opt.textContent = name + ' (' + v.all.length + ')';
       sel.appendChild(opt);
     });
+
+    // Fill SELECT GROUP dropdown (only Selector/select types)
+    const selGroup = document.getElementById('selectGroup');
+    selGroup.innerHTML = '';
+    const selectors = groups.filter(([_, v]) => v.type === 'Selector' || v.type === 'select');
+    selectors.forEach(([name, v]) => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      selGroup.appendChild(opt);
+    });
+
+    // Enable/disable SELECT checkbox based on available selectors
+    const autoSelectCb = document.getElementById('autoSelect');
+    if (selectors.length === 0) {
+      autoSelectCb.disabled = true;
+      autoSelectCb.checked = false;
+    } else {
+      autoSelectCb.disabled = false;
+    }
+
+    // Sync GROUP → SELECT GROUP
+    sel.addEventListener('change', syncSelectGroup);
+    syncSelectGroup();
+
     document.getElementById('startBtn').disabled = false;
     setStatus('Loaded ' + groups.length + ' groups');
   } catch (e) {
     setStatus('Error: ' + e.message + ' (check API port)');
   }
   btn.disabled = false;
+}
+
+function syncSelectGroup() {
+  const group = document.getElementById('group').value;
+  const selGroup = document.getElementById('selectGroup');
+  // If current GROUP exists in SELECT GROUP list, select it
+  const opts = Array.from(selGroup.options);
+  const match = opts.find(o => o.value === group);
+  if (match) selGroup.value = group;
 }
 
 function resolveNodes(group, topMember, visited) {
@@ -401,6 +489,8 @@ async function startCheck() {
 
   const timeout = parseInt(document.getElementById('timeout').value) || 3;
   const threshold = parseInt(document.getElementById('threshold').value) || 70;
+  const fw = parseFloat(document.getElementById('fraudWeight').value) || 0.6;
+  const dw = parseFloat(document.getElementById('delayWeight').value) || 0.4;
 
   let nodes = resolveNodes(group);
   nodes = dedupeNodes(nodes);
@@ -440,7 +530,7 @@ async function startCheck() {
       const ip = data.ip || '-';
       const cc = data.countryCode || '';
       const delay = node.delay;
-      const final = (score != null) ? calcFinal(score, delay, threshold, 0.6, 0.4) : -1;
+      const final = (score != null) ? calcFinal(score, delay, threshold, fw, dw) : -1;
 
       const entry = { node: node.name, ip, cc, score, delay, final, risk: '' };
 
@@ -469,12 +559,42 @@ async function startCheck() {
   body.innerHTML = '';
   results.forEach(r => appendRow(r));
 
-  // Summary
+  // Summary & auto-select
   const best = results.find(r => r.final > 0);
+  let summaryText = '';
   if (best) {
+    summaryText = '> Best: ' + best.node + ' (Final: ' + best.final.toFixed(4) + ')';
+  }
+
+  // Auto-select
+  const autoSelect = document.getElementById('autoSelect').checked;
+  const selectGroupName = document.getElementById('selectGroup').value;
+  if (autoSelect && selectGroupName && best) {
+    const selectGroupData = allProxies.proxies[selectGroupName];
+    if (selectGroupData && (selectGroupData.type === 'Selector' || selectGroupData.type === 'select')) {
+      // Find the top-level member for the best node
+      const bestEntry = nodes.find(n => n.name === best.node);
+      const selectTarget = (bestEntry && bestEntry.topMember !== best.node) ? bestEntry.topMember : best.node;
+      try {
+        const putResp = await fetch(apiBase() + '/proxies/' + encodeURIComponent(selectGroupName), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: selectTarget })
+        });
+        if (putResp.ok || putResp.status === 204) {
+          summaryText += ' | Switched ' + selectGroupName + ' → ' + selectTarget;
+        } else {
+          summaryText += ' | Switch failed: HTTP ' + putResp.status;
+        }
+      } catch (e) {
+        summaryText += ' | Switch error: ' + e.message;
+      }
+    }
+  }
+
+  if (summaryText) {
     document.getElementById('summary').style.display = '';
-    document.getElementById('summary').textContent =
-      '> Best: ' + best.node + ' (Final: ' + best.final.toFixed(4) + ')';
+    document.getElementById('summary').textContent = summaryText;
   }
 
   // Reset UI
