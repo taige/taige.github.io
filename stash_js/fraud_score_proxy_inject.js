@@ -18,6 +18,7 @@ if (!node) {
     },
   });
 } else {
+  const startTime = Date.now();
   $httpClient.get(
     {
       url: "https://my.ippure.com/v1/info",
@@ -27,25 +28,35 @@ if (!node) {
       },
     },
     (error, response, data) => {
+      const elapsed = Date.now() - startTime;
       const status = response ? response.status || response.statusCode : "null";
-      console.log("[ippure] node=" + node + " status=" + status);
+      console.log("[ippure] node=" + node + " status=" + status + " elapsed=" + elapsed + "ms");
       if (error) {
         console.log("[ippure] ERROR node=" + node + " err=" + error);
         $done({
           response: {
             status: 502,
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ error: error.toString(), node: node }),
+            body: JSON.stringify({ error: error.toString(), node: node, elapsed: elapsed }),
           },
         });
         return;
       }
-      console.log("[ippure] OK node=" + node + " body=" + (data || "").substring(0, 200));
+      console.log("[ippure] OK node=" + node + " body=" + (data || "").substring(0, 500));
+      // Merge elapsed into the response JSON
+      let body = data;
+      try {
+        const parsed = JSON.parse(data);
+        parsed.elapsed = elapsed;
+        body = JSON.stringify(parsed);
+      } catch (e) {
+        // If body is not JSON, return as-is
+      }
       $done({
         response: {
           status: status || 200,
           headers: { "Content-Type": "application/json" },
-          body: data,
+          body: body,
         },
       });
     }

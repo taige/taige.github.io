@@ -14,5 +14,5 @@ http:
 
 script-providers:
   fraud-score-proxy-inject:
-    url: https://raw.githubusercontent.com/taige/taige.github.io/master/stash_js/fraud_score_proxy_inject.js?t=1741776000
+    url: https://raw.githubusercontent.com/taige/taige.github.io/master/stash_js/fraud_score_proxy_inject.js?t=1773303912
     interval: 86400
