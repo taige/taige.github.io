@@ -56,7 +56,16 @@ while IFS= read -r node; do
 
   # request local Stash rewrite endpoint — script fetches ippure via X-Stash-Selected-Proxy
   NODE_ENCODED=$(urlencode "$node")
-  RESP=$(curl -s --max-time 15 "${CHECK_URL}?node=${NODE_ENCODED}" 2>/dev/null || echo "")
+  RESP=$(curl -s --max-time 15 "${CHECK_URL}?node=${NODE_ENCODED}" 2>/tmp/fraud-check-curl.log || echo "")
+
+  if [[ -z "$RESP" ]] && [[ -f /tmp/fraud-check-curl.log ]]; then
+    ERR=$(cat /tmp/fraud-check-curl.log)
+    if [[ -n "$ERR" ]]; then
+      printf "ERROR: %s\n" "$ERR"
+      RESULTS="${RESULTS}-1\t⚪\t${node}\t-\tError\n"
+      continue
+    fi
+  fi
 
   if [[ -z "$RESP" ]]; then
     printf "TIMEOUT\n"

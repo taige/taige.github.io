@@ -1,11 +1,13 @@
 // Stash HTTP Rewrite Script (request type)
-// Intercepts http://fraud-check.local/ requests,
+// Intercepts http://fraud-check.stash/ requests,
 // uses $httpClient with X-Stash-Selected-Proxy to fetch ippure.com,
 // and returns the result as a synthetic response.
 
 const url = $request.url || "";
+console.log("Request URL: " + url);
 const match = url.match(/[?&]node=([^&]+)/);
 const node = match ? decodeURIComponent(match[1]) : "";
+console.log("Node: " + node);
 
 if (!node) {
   $done({
@@ -25,7 +27,9 @@ if (!node) {
       },
     },
     (error, response, data) => {
+      console.log("Response status: " + (response ? response.status || response.statusCode : "null"));
       if (error) {
+        console.log("Error: " + error);
         $done({
           response: {
             status: 502,
