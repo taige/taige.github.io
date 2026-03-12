@@ -6,6 +6,8 @@ hosts:
   fraud-check.stash: 127.0.0.1
 
 http:
+  mitm:
+    - fraud-check.stash
   script:
     - match: ^http://fraud-check\.stash/
       name: fraud-score-proxy-inject

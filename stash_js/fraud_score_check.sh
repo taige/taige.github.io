@@ -104,7 +104,7 @@ echo "============================== Summary =============================="
 printf "%-4s %-40s %-16s %5s  %-6s\n" "" "Node" "IP" "Score" "Risk"
 echo "─────────────────────────────────────────────────────────────────────"
 
-printf "$RESULTS" | sort -t$'\t' -k1 -n -r | while IFS=$'\t' read -r score icon node ip risk; do
+printf '%b' "$RESULTS" | sort -t$'\t' -k1 -n -r | while IFS=$'\t' read -r score icon node ip risk; do
   printf "%-4s %-40s %-16s %5s  %-6s\n" "$icon" "$node" "$ip" "$score" "$risk"
 done
 
