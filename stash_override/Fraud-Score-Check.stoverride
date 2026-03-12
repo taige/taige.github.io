@@ -3,6 +3,8 @@ icon: https://ippure.com/logo.png
 desc: 提供本地 HTTP 接口，通过指定节点查询 IP fraud score
 
 http:
+  force-http-engine:
+    - 'fraud-check.stash:80'
   mitm:
     - fraud-check.stash
   script:
@@ -16,18 +18,3 @@ script-providers:
   fraud-score-proxy-inject:
     url: https://raw.githubusercontent.com/taige/taige.github.io/master/stash_js/fraud_score_proxy_inject.js
     interval: 86400
-    payload: |
-      console.log("fraud-score-proxy-inject loaded");
-      const url = $request.url || "";
-      console.log("Request URL: " + url);
-      const match = url.match(/[?&]node=([^&]+)/);
-      const node = match ? decodeURIComponent(match[1]) : "";
-      console.log("Node: " + node);
-      if (!node) {
-        $done({ response: { status: 200, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ok: true, msg: "no node param" }) } });
-      } else {
-        $httpClient.get({ url: "https://my.ippure.com/v1/info", timeout: 15, headers: { "X-Stash-Selected-Proxy": encodeURIComponent(node) } }, (error, response, data) => {
-          if (error) { $done({ response: { status: 502, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ error: String(error), node: node }) } }); return; }
-          $done({ response: { status: response.status || response.statusCode || 200, headers: { "Content-Type": "application/json" }, body: data } });
-        });
-      }
