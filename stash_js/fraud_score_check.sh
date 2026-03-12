@@ -202,7 +202,7 @@ done <<< "$NODES"
 # print sorted summary
 echo ""
 echo "========================================== Summary =========================================="
-printf "     %-44s %-16s %5s  %-6s %7s  %6s\n" "Node" "IP" "Score" "Risk" "Delay" "Final"
+printf "     %-44s %-16s %5s  %-4s %8s  %6s\n" "Node" "IP" "Score" "Risk" "Delay" "Final"
 echo "─────────────────────────────────────────────────────────────────────────────────────────────"
 
 BEST_NODE=""
@@ -225,7 +225,7 @@ printf '%b' "$RESULTS" | sort -t$'\t' -k7 -g -r | while IFS=$'\t' read -r score 
     display_node="$node"
   fi
   node_padded=$(pad_right "$icon $display_node" 48)
-  printf '%s %-16s %5s  %-6s %7s  %6s\n' "$node_padded" "$ip" "$score" "$risk" "$delay_str" "$final_str"
+  printf '%s %-16s %5s  %-4s %8s  %6s\n' "$node_padded" "$ip" "$score" "$risk" "$delay_str" "$final_str"
 done
 
 # find best node (outside subshell)
