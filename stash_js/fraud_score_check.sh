@@ -2,7 +2,7 @@
 set -euo pipefail
 
 API_BASE="http://127.0.0.1:9090"
-CHECK_URL="http://fraud-check.local/"
+CHECK_URL="http://fraud-check.stash/"
 
 urlencode() {
   python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$1"

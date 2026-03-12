@@ -3,7 +3,7 @@ icon: https://ippure.com/logo.png
 desc: 提供本地 HTTP 接口，通过指定节点查询 IP fraud score
 
 hosts:
-  fraud-check.local: 127.0.0.1
+  fraud-check.stash: 127.0.0.1
 
 http:
   script:
