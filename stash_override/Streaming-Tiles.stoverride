@@ -1,6 +1,7 @@
 name: 流媒体解锁状态检测
 icon: https://fastly.jsdelivr.net/gh/taige/taige.github.io@master/icons/live-streaming.png
 desc: 在 Stash 首页折叠卡片中直观显示 YouTube、Netflix 的当前解锁状态
+category: tile
 
 tiles:
   - name: Check_YouTube

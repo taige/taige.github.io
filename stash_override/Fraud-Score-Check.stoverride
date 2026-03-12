@@ -1,6 +1,7 @@
 name: Fraud Score Check
 icon: https://ippure.com/logo.png
 desc: 提供本地 HTTP 接口，通过指定节点查询 IP fraud score
+category: tile
 
 http:
   force-http-engine:
