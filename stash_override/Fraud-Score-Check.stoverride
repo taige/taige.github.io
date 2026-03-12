@@ -7,7 +7,7 @@ hosts:
 
 http:
   script:
-    - match: ^http://fraud-check\.local/
+    - match: ^http://fraud-check\.stash/
       name: fraud-score-proxy-inject
       type: request
       timeout: 15
