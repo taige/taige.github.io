@@ -112,6 +112,49 @@ if ! api_get "/proxies" >/dev/null 2>&1; then
   exit 1
 fi
 
+# resolve leaf nodes recursively (expand sub-groups)
+# outputs: leaf_node\ttop_level_member (tab-separated)
+# $1=group, $2=top-level member (empty for root call)
+resolve_nodes() {
+  local group_encoded
+  group_encoded=$(urlencode "$1")
+  local top_member="${2:-}"
+  local data
+  data=$(api_get "/proxies/$group_encoded")
+  local members
+  members=$(echo "$data" | jq -r '.all[]?' 2>/dev/null)
+  if [[ -z "$members" ]]; then
+    return
+  fi
+  while IFS= read -r member; do
+    local current_top="${top_member:-$member}"
+    local member_encoded
+    member_encoded=$(urlencode "$member")
+    local member_data
+    member_data=$(api_get "/proxies/$member_encoded")
+    local member_all
+    member_all=$(echo "$member_data" | jq -r '.all[]?' 2>/dev/null)
+    if [[ -n "$member_all" ]]; then
+      # it's a sub-group, recurse with top-level member preserved
+      resolve_nodes "$member" "$current_top"
+    else
+      # it's a leaf node
+      echo "${member}	${current_top}"
+    fi
+  done <<< "$members"
+}
+
+# lookup: find the top-level member for a given leaf node
+lookup_top_member() {
+  local node="$1"
+  echo "$NODE_MAP" | while IFS=$'\t' read -r leaf top; do
+    if [[ "$leaf" == "$node" ]]; then
+      echo "$top"
+      return
+    fi
+  done
+}
+
 # get nodes from target group
 TARGET_ENCODED=$(urlencode "$TARGET_GROUP")
 GROUP_DATA=$(api_get "/proxies/$TARGET_ENCODED")
@@ -125,7 +168,9 @@ if [[ "$GROUP_TYPE" == "null" || -z "$GROUP_TYPE" ]]; then
   exit 1
 fi
 
-NODES=$(echo "$GROUP_DATA" | jq -r '.all[]' | grep -iv 'local')
+echo "Resolving nodes from '$TARGET_GROUP' ..."
+NODE_MAP=$(resolve_nodes "$TARGET_GROUP" | grep -iv 'local')
+NODES=$(echo "$NODE_MAP" | cut -f1 | sort -u)
 NODE_COUNT=$(echo "$NODES" | wc -l | tr -d ' ')
 
 echo "Target group: $TARGET_GROUP ($GROUP_TYPE, $NODE_COUNT nodes)"
@@ -201,9 +246,9 @@ done <<< "$NODES"
 
 # print sorted summary
 echo ""
-echo "========================================== Summary =========================================="
-printf "     %-44s %-16s %5s  %-4s %8s  %6s\n" "Node" "IP" "Score" "Risk" "Delay" "Final"
-echo "─────────────────────────────────────────────────────────────────────────────────────────────"
+echo "======================================== Summary ========================================="
+printf "     %-38s %-16s %5s  %-6s %7s  %6s\n" "Node" "IP" "Score" "Risk" "Delay" "Final"
+echo "──────────────────────────────────────────────────────────────────────────────────────────"
 
 BEST_NODE=""
 BEST_FINAL="-1"
@@ -224,8 +269,8 @@ printf '%b' "$RESULTS" | sort -t$'\t' -k7 -g -r | while IFS=$'\t' read -r score 
   else
     display_node="$node"
   fi
-  node_padded=$(pad_right "$icon $display_node" 48)
-  printf '%s %-16s %5s  %-4s %8s  %6s\n' "$node_padded" "$ip" "$score" "$risk" "$delay_str" "$final_str"
+  node_padded=$(pad_right "$icon $display_node" 42)
+  printf '%s %-16s %5s  %-6s %7s  %6s\n' "$node_padded" "$ip" "$score" "$risk" "$delay_str" "$final_str"
 done
 
 # find best node (outside subshell)
@@ -233,7 +278,7 @@ BEST_LINE=$(printf '%b' "$RESULTS" | sort -t$'\t' -k7 -g -r | head -1)
 BEST_FINAL=$(echo "$BEST_LINE" | cut -d$'\t' -f7)
 BEST_NODE=$(echo "$BEST_LINE" | cut -d$'\t' -f3)
 
-echo "─────────────────────────────────────────────────────────────────────────────────────────────"
+echo "──────────────────────────────────────────────────────────────────────────────────────────"
 
 if [[ "$BEST_FINAL" == "-1" || -z "$BEST_NODE" ]]; then
   echo ""
@@ -256,8 +301,16 @@ if [[ "$AUTO_SELECT" == "true" ]]; then
     exit 1
   fi
 
-  echo "Switching '$SELECT_GROUP' → $BEST_NODE ..."
-  PUT_RESP=$(api_put "/proxies/$SELECT_ENCODED" "{\"name\":\"$BEST_NODE\"}")
+  # resolve the correct direct member to select
+  SELECT_TARGET="$BEST_NODE"
+  TOP_MEMBER=$(lookup_top_member "$BEST_NODE")
+  if [[ -n "$TOP_MEMBER" && "$TOP_MEMBER" != "$BEST_NODE" ]]; then
+    SELECT_TARGET="$TOP_MEMBER"
+    echo "Best node '$BEST_NODE' belongs to sub-group '$TOP_MEMBER'"
+  fi
+
+  echo "Switching '$SELECT_GROUP' → $SELECT_TARGET ..."
+  PUT_RESP=$(api_put "/proxies/$SELECT_ENCODED" "{\"name\":\"$SELECT_TARGET\"}")
 
   # PUT returns empty body on 204 success
   if [[ -z "$PUT_RESP" ]]; then
