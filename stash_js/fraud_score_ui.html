@@ -33,35 +33,63 @@ body {
   font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  padding-bottom: calc(56px + env(safe-area-inset-bottom));
   -webkit-font-smoothing: antialiased;
 }
 
 .container {
+  width: 100%;
   max-width: 960px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 20px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
 }
 
 h1 {
   color: var(--fg);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
-  margin-bottom: 24px;
+  margin: 0;
   text-shadow: 0 0 20px rgba(51, 255, 102, 0.3);
 }
 
 h1 span { color: var(--fg-muted); font-weight: 400; }
 
-/* Controls */
+/* --- Sticky top area --- */
+.top-fixed {
+  flex-shrink: 0;
+  background: var(--bg);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: 12px;
+}
+
+/* --- Tab content --- */
+.tab-content { display: none; }
+.tab-content.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* --- Controls (Main tab) --- */
 .controls {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: 16px;
+  margin-top: 16px;
 }
 
 .control-row {
@@ -76,16 +104,10 @@ h1 span { color: var(--fg-muted); font-weight: 400; }
 label {
   color: var(--fg-dim);
   font-size: 12px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
   flex-shrink: 0;
-}
-
-label.cb-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
 }
 
 select, input[type="number"] {
@@ -114,42 +136,7 @@ select:focus, input:focus {
   border-color: var(--fg-dim);
 }
 
-input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-  cursor: pointer;
-  flex-shrink: 0;
-  position: relative;
-}
-
-input[type="checkbox"]:checked {
-  background: var(--fg);
-  border-color: var(--fg);
-}
-
-input[type="checkbox"]:checked::after {
-  content: '';
-  position: absolute;
-  left: 5px;
-  top: 2px;
-  width: 5px;
-  height: 9px;
-  border: solid var(--bg);
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-input[type="checkbox"]:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-input[type="number"] { width: 80px; flex: none; }
+input[type="number"] { width: 100px; flex: none; }
 
 .btn {
   background: transparent;
@@ -159,7 +146,7 @@ input[type="number"] { width: 80px; flex: none; }
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
-  padding: 10px 20px;
+  padding: 10px 24px;
   cursor: pointer;
   transition: all 0.2s;
   text-transform: uppercase;
@@ -177,9 +164,27 @@ input[type="number"] { width: 80px; flex: none; }
 }
 .btn-stop:hover { background: var(--rose-bg); }
 
-/* Progress */
+/* Toggle button (Auto Apply Best) */
+.btn-toggle {
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  background: transparent;
+  font-size: 12px;
+  padding: 10px 16px;
+}
+.btn-toggle.active {
+  border-color: var(--fg-dim);
+  color: var(--fg);
+  background: var(--fg-subtle);
+}
+.btn-toggle:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* --- Progress --- */
 .progress-wrap {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   display: none;
 }
 
@@ -207,20 +212,25 @@ input[type="number"] { width: 80px; flex: none; }
   margin-top: 8px;
 }
 
-/* Results Table */
+/* --- Results Table --- */
 .results {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
-  overflow: hidden;
   display: none;
 }
 
 .results.active { display: block; }
 
 .results-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.results-header {
   display: grid;
-  grid-template-columns: 1fr 120px 60px 70px 70px 70px;
+  grid-template-columns: 1fr 60px 70px 70px 70px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   font-size: 11px;
@@ -229,28 +239,45 @@ input[type="number"] { width: 80px; flex: none; }
   letter-spacing: 1px;
 }
 
+.results-header .col-score,
+.results-header .col-delay,
+.results-header .col-final { text-align: right; }
+.results-header .col-risk { text-align: center; }
+
 .result-row {
   display: grid;
-  grid-template-columns: 1fr 120px 60px 70px 70px 70px;
+  grid-template-columns: 1fr 60px 70px 70px 70px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--fg-subtle);
   font-size: 13px;
   align-items: center;
-  animation: fadeInUp 0.3s ease-out;
+  transition: background 0.15s;
 }
 
 .result-row:last-child { border-bottom: none; }
+.result-row:hover { background: rgba(51, 255, 102, 0.03); }
+.result-row.best { border-left: 3px solid var(--fg); background: rgba(51, 255, 102, 0.04); }
 
 .node-name {
   overflow: hidden;
+  color: var(--text);
+  min-width: 0;
+}
+
+.node-label {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text);
 }
 
 .node-cc { color: var(--fg-dim); font-size: 11px; }
 
-.ip { color: var(--text-dim); font-size: 12px; }
+.node-ip { color: var(--text-dim); font-size: 11px; margin-top: 2px; }
+
+.score { text-align: right; font-weight: 600; }
+.risk { text-align: center; }
+.delay { color: var(--text-dim); font-size: 12px; text-align: right; }
+.final { color: var(--text-dim); font-size: 12px; text-align: right; }
 
 .badge {
   display: inline-block;
@@ -266,109 +293,212 @@ input[type="number"] { width: 80px; flex: none; }
 .badge-low { background: var(--emerald-bg); color: var(--emerald); border: 1px solid var(--emerald-border); }
 .badge-error { background: var(--fg-subtle); color: var(--text-dim); border: 1px solid var(--border); }
 
-.delay, .final { color: var(--text-dim); font-size: 12px; text-align: right; }
-
-/* Summary */
-.summary {
-  padding: 16px;
-  border-top: 1px solid var(--border);
+/* --- Best Banner --- */
+.best-banner {
+  background: rgba(51, 255, 102, 0.06);
+  border: 1px solid rgba(51, 255, 102, 0.25);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+.best-banner-title {
   color: var(--fg);
-  font-size: 13px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.best-banner-detail {
+  color: var(--text-dim);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.best-banner-switch {
+  color: var(--fg-dim);
+  font-size: 12px;
+  margin-top: 2px;
 }
 
-/* Mobile responsive */
-@media (max-width: 640px) {
-  .container { padding: 16px 12px; }
-  h1 { font-size: 16px; }
-
-  .control-row { flex-wrap: wrap; }
-  .control-row label { font-size: 11px; }
-  .control-row input[type="number"] { width: 60px; }
-
-  .results-header {
-    grid-template-columns: 1fr 60px 60px;
-  }
-  .results-header .col-ip,
-  .results-header .col-delay,
-  .results-header .col-final { display: none; }
-
-  .result-row {
-    grid-template-columns: 1fr 60px 60px;
-  }
-  .result-row .ip,
-  .result-row .delay,
-  .result-row .final { display: none; }
-
-  .node-name { font-size: 12px; }
+/* --- Settings tab --- */
+.settings-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 4px 16px;
 }
 
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--fg-subtle);
 }
 
-/* Status message */
+.setting-row:last-child { border-bottom: none; }
+.setting-row label { flex-shrink: 0; }
+.setting-row input { width: 120px; text-align: right; flex: none; }
+
+/* --- Bottom nav --- */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0; right: 0;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 6px 0;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom));
+  z-index: 10;
+}
+
+.nav-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 8px;
+  cursor: pointer;
+  transition: color 0.2s;
+  text-align: center;
+}
+
+.nav-btn.active { color: var(--fg); }
+.nav-btn:hover { color: var(--fg-dim); }
+
+.nav-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+/* --- Status --- */
 .status {
   color: var(--fg-muted);
   font-size: 12px;
   padding: 12px 0;
   text-align: center;
 }
+
+.version {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+  padding: 8px 0 4px;
+}
+
+/* --- Mobile responsive --- */
+@media (max-width: 640px) {
+  .container { padding: 16px 12px; }
+  h1 { font-size: 16px; }
+  select { font-size: 16px; }
+
+  .results-header {
+    grid-template-columns: 1fr 50px 56px 56px 56px;
+  }
+
+  .result-row {
+    grid-template-columns: 1fr 50px 56px 56px 56px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .node-name { font-size: 12px; }
+  .badge { font-size: 10px; padding: 2px 6px; }
+  .delay, .final { font-size: 11px; }
+}
+
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>$ fraud-score-check <span>v1.0</span></h1>
+  <!-- Sticky top: title + controls + progress -->
+  <div class="top-fixed">
+    <h1>$ fraud-score-check <span>v1.0</span></h1>
 
-  <div class="controls">
-    <div class="control-row">
-      <label>GROUP</label>
-      <select id="group"><option value="">-- loading --</option></select>
-      <label class="cb-label"><input type="checkbox" id="autoSelect" disabled> AUTO SELECT</label>
-    </div>
-    <div class="control-row">
-      <label>THRESHOLD</label>
-      <input type="number" id="threshold" value="70" min="0" max="100">
-      <label>FRAUD WT</label>
-      <input type="number" id="fraudWeight" value="0.6" min="0" max="1" step="0.1">
-      <label>DELAY WT</label>
-      <input type="number" id="delayWeight" value="0.4" min="0" max="1" step="0.1">
-    </div>
-    <div class="control-row">
-      <label>PORT</label>
-      <input type="number" id="port" value="9090" min="1" max="65535">
-      <label>TIMEOUT</label>
-      <input type="number" id="timeout" value="3" min="1" max="30">
-      <button class="btn" id="startBtn" onclick="startCheck()" disabled>Start</button>
-      <button class="btn btn-stop" id="stopBtn" onclick="stopCheck()" style="display:none">Stop</button>
+    <!-- Main Tab controls -->
+    <div id="mainControls">
+      <div class="controls">
+        <div class="control-row">
+          <select id="group"><option value="">-- loading --</option></select>
+        </div>
+        <div class="control-row">
+          <button class="btn btn-toggle" id="autoSelectBtn" onclick="toggleAutoSelect()" disabled>Auto Apply Best</button>
+          <span style="flex:1"></span>
+          <button class="btn" id="startBtn" onclick="startCheck()" disabled>Start</button>
+          <button class="btn btn-stop" id="stopBtn" onclick="stopCheck()" style="display:none">Stop</button>
+        </div>
+      </div>
+
+      <div class="progress-wrap" id="progress">
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-text" id="progressText"></div>
+      </div>
     </div>
   </div>
 
-  <div class="progress-wrap" id="progress">
-    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-    <div class="progress-text" id="progressText"></div>
-  </div>
-
-  <div class="results" id="results">
-    <div class="results-header">
-      <span>Node</span>
-      <span class="col-ip">IP</span>
-      <span>Score</span>
-      <span>Risk</span>
-      <span class="col-delay">Delay</span>
-      <span class="col-final">Final</span>
+  <!-- Main Tab -->
+  <div class="tab-content active" id="tabMain">
+    <div class="best-banner" id="bestBanner" style="display:none">
+      <div class="best-banner-title"></div>
+      <div class="best-banner-detail"></div>
+      <div class="best-banner-switch"></div>
     </div>
-    <div id="resultBody"></div>
-    <div class="summary" id="summary" style="display:none"></div>
+    <div class="results" id="results">
+      <div class="results-header">
+        <span>Node</span>
+        <span class="col-score">Score</span>
+        <span class="col-risk">Risk</span>
+        <span class="col-delay">Delay</span>
+        <span class="col-final">Final</span>
+      </div>
+      <div id="resultBody"></div>
+    </div>
+
+    <div class="status" id="status"></div>
   </div>
 
-  <div class="status" id="status"></div>
+  <!-- Settings Tab -->
+  <div class="tab-content" id="tabSettings">
+    <div class="settings-card">
+      <div class="setting-row">
+        <label>PORT</label>
+        <input type="number" id="port" value="9090" min="1" max="65535">
+      </div>
+      <div class="setting-row">
+        <label>TIMEOUT</label>
+        <input type="number" id="timeout" value="3" min="1" max="30">
+      </div>
+      <div class="setting-row">
+        <label>THRESHOLD</label>
+        <input type="number" id="threshold" value="70" min="0" max="100">
+      </div>
+      <div class="setting-row">
+        <label>FRAUD WEIGHT</label>
+        <input type="number" id="fraudWeight" value="0.6" min="0" max="1" step="0.1">
+      </div>
+      <div class="setting-row">
+        <label>DELAY WEIGHT</label>
+        <input type="number" id="delayWeight" value="0.4" min="0" max="1" step="0.1">
+      </div>
+    </div>
+  </div>
+
+  <div class="version">v.2026-03-13.111056</div>
 </div>
 
+<!-- Bottom Navigation -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="navMain" onclick="switchTab('main')">
+    <span class="nav-icon">&#9776;</span>Home
+  </button>
+  <button class="nav-btn" id="navSettings" onclick="switchTab('settings')">
+    <span class="nav-icon">&#9881;</span>Settings
+  </button>
+</nav>
+
 <script>
-const API_CHECK = 'http://fraud-check.stash';
+// Environment detection: Stash serves from fraud-check.stash, local dev uses serve.js proxy
+const API_CHECK = location.hostname === 'fraud-check.stash' ? '' : location.origin;
 let abortController = null;
 let allProxies = null;
+let autoSelectEnabled = false;
 
 function apiBase() {
   return 'http://127.0.0.1:' + document.getElementById('port').value;
@@ -378,6 +508,44 @@ function setStatus(msg) {
   document.getElementById('status').textContent = msg;
 }
 
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// --- Tab switching ---
+
+function switchTab(tab) {
+  document.getElementById('tabMain').classList.toggle('active', tab === 'main');
+  document.getElementById('tabSettings').classList.toggle('active', tab === 'settings');
+  document.getElementById('navMain').classList.toggle('active', tab === 'main');
+  document.getElementById('navSettings').classList.toggle('active', tab === 'settings');
+  document.getElementById('mainControls').style.display = tab === 'main' ? '' : 'none';
+}
+
+// --- Auto Select toggle button ---
+
+function toggleAutoSelect() {
+  const btn = document.getElementById('autoSelectBtn');
+  if (btn.disabled) return;
+  autoSelectEnabled = !autoSelectEnabled;
+  btn.classList.toggle('active', autoSelectEnabled);
+}
+
+function updateAutoSelectState() {
+  const group = document.getElementById('group').value;
+  const btn = document.getElementById('autoSelectBtn');
+  if (!allProxies || !group) { btn.disabled = true; return; }
+  const g = allProxies.proxies[group];
+  const isSelector = g && (g.type === 'Selector' || g.type === 'select');
+  btn.disabled = !isSelector;
+  if (!isSelector) {
+    autoSelectEnabled = false;
+    btn.classList.remove('active');
+  }
+}
+
+// --- Load groups (auto on page load) ---
+
 async function loadGroups() {
   setStatus('Loading proxies...');
   try {
@@ -386,7 +554,14 @@ async function loadGroups() {
 
     const sel = document.getElementById('group');
     sel.innerHTML = '';
-    const groups = Object.entries(allProxies.proxies).filter(([_, v]) => v.all);
+    const SYSTEM_GROUPS = new Set(['GLOBAL', 'PROXY']);
+    const groups = Object.entries(allProxies.proxies)
+      .filter(([name, v]) => v.all && !SYSTEM_GROUPS.has(name))
+      .sort((a, b) => {
+        const ta = a[1].type === 'Selector' || a[1].type === 'select' ? 0 : 1;
+        const tb = b[1].type === 'Selector' || b[1].type === 'select' ? 0 : 1;
+        return ta !== tb ? ta - tb : a[0].localeCompare(b[0]);
+      });
     groups.forEach(([name, v]) => {
       const opt = document.createElement('option');
       opt.value = name;
@@ -394,6 +569,10 @@ async function loadGroups() {
       sel.appendChild(opt);
     });
 
+    // Default to "手动选择" (matches shell script default)
+    if ([...sel.options].some(o => o.value === '手动选择')) {
+      sel.value = '手动选择';
+    }
     sel.addEventListener('change', updateAutoSelectState);
     updateAutoSelectState();
 
@@ -404,15 +583,7 @@ async function loadGroups() {
   }
 }
 
-function updateAutoSelectState() {
-  const group = document.getElementById('group').value;
-  const cb = document.getElementById('autoSelect');
-  if (!allProxies || !group) { cb.disabled = true; return; }
-  const g = allProxies.proxies[group];
-  const isSelector = g && (g.type === 'Selector' || g.type === 'select');
-  cb.disabled = !isSelector;
-  if (!isSelector) cb.checked = false;
-}
+// --- Resolve leaf nodes (matches shell script's resolve_nodes_jq) ---
 
 function resolveNodes(group, topMember, visited) {
   if (!allProxies) return [];
@@ -425,16 +596,15 @@ function resolveNodes(group, topMember, visited) {
 
   const results = [];
   for (const member of g.all) {
-    const p = allProxies.proxies[member];
-    if (!p) continue;
-    if (p.type === 'Direct' || p.type === 'Reject') continue;
     if (/local/i.test(member)) continue;
+    const p = allProxies.proxies[member];
+    if (p && (p.type === 'Direct' || p.type === 'Reject')) continue;
 
     const top = topMember || member;
-    if (p.all) {
+    if (p && p.all) {
       results.push(...resolveNodes(member, top, visited));
     } else {
-      results.push({ name: member, topMember: top, delay: p.delay || 0 });
+      results.push({ name: member, topMember: top, delay: (p && p.delay) || 0 });
     }
   }
   return results;
@@ -449,11 +619,24 @@ function dedupeNodes(nodes) {
   });
 }
 
-function riskBadge(score) {
-  if (score >= 70) return '<span class="badge badge-high">High</span>';
-  if (score >= 40) return '<span class="badge badge-medium">Medium</span>';
-  return '<span class="badge badge-low">Low</span>';
+// --- Delay: cached -> fallback to real-time test ---
+
+async function fetchDelay(nodeName, cachedDelay, signal) {
+  if (cachedDelay > 0) return cachedDelay;
+  try {
+    const resp = await fetch(
+      apiBase() + '/proxies/' + encodeURIComponent(nodeName) +
+      '/delay?timeout=5000&url=http://cp.cloudflare.com/generate_204',
+      { signal }
+    );
+    const data = await resp.json();
+    return data.delay || 0;
+  } catch (e) {
+    return 0;
+  }
 }
+
+// --- Final score: weighted geometric mean ---
 
 function calcFinal(score, delay, threshold, fw, dw) {
   if (score >= threshold || !delay || delay <= 0) return -1;
@@ -461,6 +644,59 @@ function calcFinal(score, delay, threshold, fw, dw) {
   const delayComp = Math.exp(-delay / 500);
   return Math.exp(fw * Math.log(fraudComp) + dw * Math.log(delayComp));
 }
+
+// --- Risk badge ---
+
+function riskBadge(score) {
+  if (score >= 70) return '<span class="badge badge-high">High</span>';
+  if (score >= 40) return '<span class="badge badge-medium">Medium</span>';
+  return '<span class="badge badge-low">Low</span>';
+}
+
+// --- Score color ---
+
+function scoreColor(score) {
+  if (score >= 70) return 'var(--rose)';
+  if (score >= 40) return 'var(--amber)';
+  return 'var(--emerald)';
+}
+
+// --- Sort: final descending, -1 goes last ---
+
+function sortResults(results) {
+  results.sort((a, b) => {
+    if (a.final === -1 && b.final === -1) return 0;
+    if (a.final === -1) return 1;
+    if (b.final === -1) return -1;
+    return b.final - a.final;
+  });
+}
+
+// --- Render result row ---
+
+function appendRow(entry, isBest) {
+  const body = document.getElementById('resultBody');
+  const row = document.createElement('div');
+  row.className = 'result-row' + (isBest ? ' best' : '');
+
+  const ccPrefix = entry.cc ? '<span class="node-cc">[' + escapeHtml(entry.cc) + ']</span>' : '';
+  const ipText = entry.ip && entry.ip !== '-' ? escapeHtml(entry.ip) : '-';
+  const hasScore = entry.score != null && entry.score !== '';
+  const scoreText = hasScore ? entry.score : '-';
+  const scoreStyle = hasScore ? ' style="color:' + scoreColor(entry.score) + '"' : '';
+  const delayText = entry.delay > 0 ? entry.delay + 'ms' : '-';
+  const finalText = entry.final > 0 ? entry.final.toFixed(4) : '-';
+
+  row.innerHTML =
+    '<span class="node-name"><div class="node-label">' + ccPrefix + escapeHtml(entry.node) + '</div><div class="node-ip">' + ipText + '</div></span>' +
+    '<span class="score"' + scoreStyle + '>' + scoreText + '</span>' +
+    '<span class="risk">' + entry.riskHtml + '</span>' +
+    '<span class="delay">' + delayText + '</span>' +
+    '<span class="final">' + finalText + '</span>';
+  body.appendChild(row);
+}
+
+// --- Main check flow ---
 
 async function startCheck() {
   const group = document.getElementById('group').value;
@@ -473,26 +709,28 @@ async function startCheck() {
 
   let nodes = resolveNodes(group);
   nodes = dedupeNodes(nodes);
+  nodes.sort((a, b) => a.name.localeCompare(b.name));
 
   if (nodes.length === 0) {
     setStatus('No nodes found in group');
     return;
   }
 
-  // UI state
   document.getElementById('startBtn').style.display = 'none';
   document.getElementById('stopBtn').style.display = '';
   document.getElementById('progress').classList.add('active');
   document.getElementById('results').classList.add('active');
   document.getElementById('resultBody').innerHTML = '';
-  document.getElementById('summary').style.display = 'none';
+  document.getElementById('bestBanner').style.display = 'none';
+  document.getElementById('bestBanner').querySelector('.best-banner-switch').textContent = '';
   setStatus('');
 
   abortController = new AbortController();
+  const signal = abortController.signal;
   const results = [];
 
   for (let i = 0; i < nodes.length; i++) {
-    if (abortController.signal.aborted) break;
+    if (signal.aborted) break;
 
     const node = nodes[i];
     const pct = ((i + 1) / nodes.length * 100).toFixed(0);
@@ -500,53 +738,77 @@ async function startCheck() {
     document.getElementById('progressText').textContent =
       '[' + (i + 1) + '/' + nodes.length + '] ' + node.name;
 
+    const entry = { node: node.name, ip: '-', cc: '', score: null, delay: 0, final: -1, risk: 'error', riskHtml: '' };
+
     try {
       const url = API_CHECK + '/?node=' + encodeURIComponent(node.name) + '&timeout=' + timeout;
-      const resp = await fetch(url, { signal: abortController.signal });
-      const data = await resp.json();
+      const resp = await fetch(url, { signal });
 
-      const score = data.fraudScore;
-      const ip = data.ip || '-';
-      const cc = data.countryCode || '';
-      const delay = node.delay;
-      const final = (score != null) ? calcFinal(score, delay, threshold, fw, dw) : -1;
-
-      const entry = { node: node.name, ip, cc, score, delay, final, risk: '' };
-
-      if (score == null) {
-        entry.risk = 'error';
-        entry.riskHtml = '<span class="badge badge-error">N/A</span>';
-      } else {
-        entry.riskHtml = riskBadge(score);
-        entry.risk = score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low';
+      if (!resp.ok) {
+        entry.riskHtml = '<span class="badge badge-error">' + (resp.status === 502 ? 'Timeout' : 'Error') + '</span>';
+        results.push(entry);
+        appendRow(entry);
+        continue;
       }
 
-      results.push(entry);
-      appendRow(entry);
+      const data = await resp.json();
+      const score = data.fraudScore;
+
+      entry.ip = data.ip || '-';
+      entry.cc = data.countryCode || '';
+
+      if (score == null || score === '') {
+        entry.riskHtml = '<span class="badge badge-error">N/A</span>';
+        results.push(entry);
+        appendRow(entry);
+        continue;
+      }
+
+      entry.score = score;
+      entry.delay = await fetchDelay(node.name, node.delay, signal);
+      entry.final = calcFinal(score, entry.delay, threshold, fw, dw);
+      entry.riskHtml = riskBadge(score);
+      entry.risk = score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low';
+
     } catch (e) {
       if (e.name === 'AbortError') break;
-      const entry = { node: node.name, ip: '-', cc: '', score: null, delay: 0, final: -1, risk: 'error',
-        riskHtml: '<span class="badge badge-error">' + (e.message || 'Error') + '</span>' };
-      results.push(entry);
-      appendRow(entry);
+      entry.riskHtml = '<span class="badge badge-error">Error</span>';
     }
+
+    results.push(entry);
+    appendRow(entry);
+    // Auto-scroll within tab container
+    const tabMain = document.getElementById('tabMain');
+    tabMain.scrollTop = tabMain.scrollHeight;
   }
 
-  // Sort and re-render
-  results.sort((a, b) => b.final - a.final);
+  // Find best result
+  const best = results.filter(r => r.final > 0).sort((a, b) => b.final - a.final)[0] || null;
+
+  // Sort and re-render with best highlight
+  sortResults(results);
   const body = document.getElementById('resultBody');
   body.innerHTML = '';
-  results.forEach(r => appendRow(r));
+  results.forEach(r => appendRow(r, best && r === best));
 
-  // Summary & auto-select
-  const best = results.find(r => r.final > 0);
-  let summaryText = '';
+  // Show Best Banner
+  const banner = document.getElementById('bestBanner');
   if (best) {
-    summaryText = '> Best: ' + best.node + ' (Final: ' + best.final.toFixed(4) + ')';
+    const riskText = best.score != null ? (best.score >= 70 ? 'High' : best.score >= 40 ? 'Medium' : 'Low') : '-';
+    banner.querySelector('.best-banner-title').textContent = '\u2605 Best: ' + best.node;
+    banner.querySelector('.best-banner-detail').textContent =
+      'Score: ' + (best.score != null ? best.score : '-') +
+      ' | Risk: ' + riskText +
+      ' | Delay: ' + (best.delay > 0 ? best.delay + 'ms' : '-') +
+      ' | Final: ' + best.final.toFixed(4);
+  } else {
+    banner.querySelector('.best-banner-title').textContent = 'No eligible nodes';
+    banner.querySelector('.best-banner-detail').textContent = '';
   }
+  banner.style.display = '';
 
-  // Auto-select: switch current GROUP to best node (only if Selector type)
-  if (document.getElementById('autoSelect').checked && best) {
+  // Auto-select
+  if (autoSelectEnabled && best) {
     const groupData = allProxies.proxies[group];
     if (groupData && (groupData.type === 'Selector' || groupData.type === 'select')) {
       const bestEntry = nodes.find(n => n.name === best.node);
@@ -558,22 +820,19 @@ async function startCheck() {
           body: JSON.stringify({ name: selectTarget })
         });
         if (putResp.ok || putResp.status === 204) {
-          summaryText += ' | Switched → ' + selectTarget;
+          banner.querySelector('.best-banner-switch').textContent = '\u2713 Switched \u2192 ' + selectTarget;
         } else {
-          summaryText += ' | Switch failed: HTTP ' + putResp.status;
+          banner.querySelector('.best-banner-switch').textContent = 'Switch failed: HTTP ' + putResp.status;
         }
       } catch (e) {
-        summaryText += ' | Switch error: ' + e.message;
+        banner.querySelector('.best-banner-switch').textContent = 'Switch error: ' + e.message;
       }
     }
   }
 
-  if (summaryText) {
-    document.getElementById('summary').style.display = '';
-    document.getElementById('summary').textContent = summaryText;
-  }
+  // Scroll to top to show banner
+  document.getElementById('tabMain').scrollTop = 0;
 
-  // Reset UI
   document.getElementById('startBtn').style.display = '';
   document.getElementById('stopBtn').style.display = 'none';
   document.getElementById('progress').classList.remove('active');
@@ -588,30 +847,8 @@ function stopCheck() {
   setStatus('Stopped.');
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function appendRow(entry) {
-  const body = document.getElementById('resultBody');
-  const row = document.createElement('div');
-  row.className = 'result-row';
-  const ccPrefix = entry.cc ? '<span class="node-cc">[' + escapeHtml(entry.cc) + ']</span>' : '';
-  const scoreText = entry.score != null ? entry.score : '-';
-  const delayText = entry.delay ? entry.delay + 'ms' : '-';
-  const finalText = entry.final > 0 ? entry.final.toFixed(4) : '-';
-  row.innerHTML =
-    '<span class="node-name">' + ccPrefix + escapeHtml(entry.node) + '</span>' +
-    '<span class="ip">' + escapeHtml(entry.ip) + '</span>' +
-    '<span>' + scoreText + '</span>' +
-    '<span>' + entry.riskHtml + '</span>' +
-    '<span class="delay">' + delayText + '</span>' +
-    '<span class="final">' + finalText + '</span>';
-  body.appendChild(row);
-}
-
 // Auto-load on page open
-window.addEventListener('load', () => { loadGroups(); });
+window.addEventListener('load', loadGroups);
 </script>
 </body>
 </html>
