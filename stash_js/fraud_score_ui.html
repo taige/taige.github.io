@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Fraud Score Check</title>
+<title>Node Scout</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -276,6 +276,8 @@ input[type="number"] { width: 100px; flex: none; }
 
 .score { text-align: right; font-weight: 600; }
 .risk { text-align: center; }
+.risk-compact { display: none; }
+.risk-full { display: inline; }
 .delay { color: var(--text-dim); font-size: 12px; text-align: right; }
 .final { color: var(--text-dim); font-size: 12px; text-align: right; }
 
@@ -311,6 +313,8 @@ input[type="number"] { width: 100px; flex: none; }
   font-size: 12px;
   margin-top: 4px;
 }
+.banner-compact { display: none; }
+.banner-full { display: inline; }
 .best-banner-switch {
   color: var(--fg-dim);
   font-size: 12px;
@@ -389,12 +393,18 @@ input[type="number"] { width: 100px; flex: none; }
   h1 { font-size: 16px; }
   select { font-size: 16px; }
 
+  .col-score, .score { display: none; }
+  .risk-full { display: none; }
+  .risk-compact { display: inline; }
+  .banner-full { display: none; }
+  .banner-compact { display: inline; }
+
   .results-header {
-    grid-template-columns: 1fr 50px 56px 56px 56px;
+    grid-template-columns: 1fr 80px 56px 56px;
   }
 
   .result-row {
-    grid-template-columns: 1fr 50px 56px 56px 56px;
+    grid-template-columns: 1fr 80px 56px 56px;
     padding: 10px 12px;
     font-size: 12px;
   }
@@ -410,7 +420,7 @@ input[type="number"] { width: 100px; flex: none; }
 <div class="container">
   <!-- Sticky top: title + controls + progress -->
   <div class="top-fixed">
-    <h1>$ fraud-score-check <span>v1.0</span></h1>
+    <h1>$ Node Scout <span>v.20260313</span></h1>
 
     <!-- Main Tab controls -->
     <div id="mainControls">
@@ -480,7 +490,7 @@ input[type="number"] { width: 100px; flex: none; }
     </div>
   </div>
 
-  <div class="version">v.2026-03-13.111056</div>
+  <div class="version">v.2026-03-13.112414</div>
 </div>
 
 <!-- Bottom Navigation -->
@@ -647,10 +657,11 @@ function calcFinal(score, delay, threshold, fw, dw) {
 
 // --- Risk badge ---
 
-function riskBadge(score) {
-  if (score >= 70) return '<span class="badge badge-high">High</span>';
-  if (score >= 40) return '<span class="badge badge-medium">Medium</span>';
-  return '<span class="badge badge-low">Low</span>';
+function riskBadge(score, includeScore) {
+  const s = includeScore && score != null ? '(' + score + ')' : '';
+  if (score >= 70) return '<span class="badge badge-high">High' + s + '</span>';
+  if (score >= 40) return '<span class="badge badge-medium">Medium' + s + '</span>';
+  return '<span class="badge badge-low">Low' + s + '</span>';
 }
 
 // --- Score color ---
@@ -685,12 +696,12 @@ function appendRow(entry, isBest) {
   const scoreText = hasScore ? entry.score : '-';
   const scoreStyle = hasScore ? ' style="color:' + scoreColor(entry.score) + '"' : '';
   const delayText = entry.delay > 0 ? entry.delay + 'ms' : '-';
-  const finalText = entry.final > 0 ? entry.final.toFixed(4) : '-';
+  const finalText = entry.final > 0 ? entry.final.toFixed(2) : '-';
 
   row.innerHTML =
     '<span class="node-name"><div class="node-label">' + ccPrefix + escapeHtml(entry.node) + '</div><div class="node-ip">' + ipText + '</div></span>' +
     '<span class="score"' + scoreStyle + '>' + scoreText + '</span>' +
-    '<span class="risk">' + entry.riskHtml + '</span>' +
+    '<span class="risk"><span class="risk-full">' + entry.riskHtml + '</span><span class="risk-compact">' + riskBadge(entry.score, true) + '</span></span>' +
     '<span class="delay">' + delayText + '</span>' +
     '<span class="final">' + finalText + '</span>';
   body.appendChild(row);
@@ -796,11 +807,13 @@ async function startCheck() {
   if (best) {
     const riskText = best.score != null ? (best.score >= 70 ? 'High' : best.score >= 40 ? 'Medium' : 'Low') : '-';
     banner.querySelector('.best-banner-title').textContent = '\u2605 Best: ' + best.node;
-    banner.querySelector('.best-banner-detail').textContent =
-      'Score: ' + (best.score != null ? best.score : '-') +
-      ' | Risk: ' + riskText +
-      ' | Delay: ' + (best.delay > 0 ? best.delay + 'ms' : '-') +
-      ' | Final: ' + best.final.toFixed(4);
+    const scoreVal = best.score != null ? best.score : '-';
+    const delayVal = best.delay > 0 ? best.delay + 'ms' : '-';
+    const finalVal = best.final.toFixed(2);
+    const riskWithScore = riskText + (best.score != null ? '(' + best.score + ')' : '');
+    banner.querySelector('.best-banner-detail').innerHTML =
+      '<span class="banner-full">Score: ' + scoreVal + ' | Risk: ' + riskText + ' | Delay: ' + delayVal + ' | Final: ' + finalVal + '</span>' +
+      '<span class="banner-compact">Risk: ' + riskWithScore + ' | Delay: ' + delayVal + ' | Final: ' + finalVal + '</span>';
   } else {
     banner.querySelector('.best-banner-title').textContent = 'No eligible nodes';
     banner.querySelector('.best-banner-detail').textContent = '';
