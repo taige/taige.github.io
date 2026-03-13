@@ -1,5 +1,5 @@
 name: Node Scout
-icon: https://cdn.jsdelivr.net/npm/@tabler/icons/icons/shield-search.svg
+icon: https://cdn.jsdelivr.net/npm/material-design-icons@3.0.1/notification/2x_web/ic_network_check_white_48dp.png
 desc: 提供本地 HTTP 接口，通过指定节点查询 IP fraud score
 category: tile
 
@@ -7,7 +7,7 @@ tiles:
   - name: NodeScout
     title: "Node Scout"
     content: "IP 欺诈评分批量检测"
-    icon: https://cdn.jsdelivr.net/npm/@tabler/icons/icons/shield-search.svg
+    icon: https://cdn.jsdelivr.net/npm/material-design-icons@3.0.1/notification/2x_web/ic_network_check_white_48dp.png
     backgroundColor: "#1a1a1a"
     collapsed: false
     url: "http://fraud-check.stash/"
