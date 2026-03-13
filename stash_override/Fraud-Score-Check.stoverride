@@ -3,6 +3,15 @@ icon: https://ippure.com/logo.png
 desc: 提供本地 HTTP 接口，通过指定节点查询 IP fraud score
 category: tile
 
+tiles:
+  - name: NodeScout
+    title: "Node Scout"
+    content: "IP 欺诈评分批量检测"
+    icon: https://ippure.com/logo.png
+    backgroundColor: "#1a1a1a"
+    collapsed: false
+    url: "http://fraud-check.stash/"
+
 http:
   force-http-engine:
     - 'fraud-check.stash:80'
@@ -15,5 +24,5 @@ http:
 
 script-providers:
   fraud-score-proxy-inject:
-    url: https://raw.githubusercontent.com/taige/taige.github.io/master/stash_js/fraud_score_proxy_inject.js?t=1773318730
+    url: https://raw.githubusercontent.com/taige/taige.github.io/master/stash_js/fraud_score_proxy_inject.js?t=1773384786
     interval: 86400
