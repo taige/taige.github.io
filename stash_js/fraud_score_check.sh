@@ -6,8 +6,9 @@ CHECK_URL="http://fraud-check.stash/"
 
 # defaults
 FRAUD_THRESHOLD=70
-FRAUD_WEIGHT=0.6
-DELAY_WEIGHT=0.4
+FRAUD_WEIGHT=0.5
+DELAY_WEIGHT=0.3
+LATENCY_WEIGHT=0.2
 AUTO_SELECT=false
 SELECT_GROUP=""
 REQ_TIMEOUT=3
@@ -60,8 +61,9 @@ Options:
   -s, --select              Auto-switch to the best node
   --select-group "name"     Target select group (default: same as GROUP)
   -t, --threshold N         Skip nodes with fraud score >= N (default: 70)
-  -fw, --fraud-weight F     Weight for fraud score component (default: 0.6)
-  -dw, --delay-weight F     Weight for delay component (default: 0.4)
+  -fw, --fraud-weight F     Weight for fraud score component (default: 0.5)
+  -dw, --delay-weight F     Weight for delay component (default: 0.3)
+  -lw, --latency-weight F   Weight for latency component (default: 0.2)
   --timeout N               Request timeout in seconds (default: 3)
   -h, --help                Show this help
 EOF
@@ -77,6 +79,7 @@ while [[ $# -gt 0 ]]; do
     -t|--threshold)   FRAUD_THRESHOLD="$2"; shift 2 ;;
     -fw|--fraud-weight)  FRAUD_WEIGHT="$2"; shift 2 ;;
     -dw|--delay-weight)  DELAY_WEIGHT="$2"; shift 2 ;;
+    -lw|--latency-weight) LATENCY_WEIGHT="$2"; shift 2 ;;
     --timeout)        REQ_TIMEOUT="$2"; shift 2 ;;
     -h|--help)        usage ;;
     -*)               echo "Unknown option: $1"; usage ;;
@@ -154,7 +157,7 @@ NODES=$(echo "$NODE_MAP" | cut -f1 | sort -u)
 NODE_COUNT=$(echo "$NODES" | wc -l | tr -d ' ')
 
 echo "Target group: $TARGET_GROUP ($GROUP_TYPE, $NODE_COUNT nodes)"
-echo "Scoring: fraud_weight=$FRAUD_WEIGHT delay_weight=$DELAY_WEIGHT threshold=$FRAUD_THRESHOLD"
+echo "Scoring: fraud_weight=$FRAUD_WEIGHT delay_weight=$DELAY_WEIGHT latency_weight=$LATENCY_WEIGHT threshold=$FRAUD_THRESHOLD"
 echo ""
 
 # collect results: score\ticon\tnode\tip\trisk\tdelay\tfinal
@@ -172,18 +175,19 @@ while IFS= read -r node; do
     ERR=$(cat /tmp/fraud-check-curl.log)
     if [[ -n "$ERR" ]]; then
       printf "ERROR: %s\n" "$ERR"
-      RESULTS="${RESULTS}-1\t⚪\t${node}\t-\tError\t-\t-1\t-\n"
+      RESULTS="${RESULTS}-1\t⚪\t${node}\t-\tError\t-\t-1\t-\t0\n"
       continue
     fi
   fi
 
   if [[ -z "$RESP" ]]; then
     printf "TIMEOUT\n"
-    RESULTS="${RESULTS}-1\t⚪\t${node}\t-\tTimeout\t-\t-1\t-\n"
+    RESULTS="${RESULTS}-1\t⚪\t${node}\t-\tTimeout\t-\t-1\t-\t0\n"
     continue
   fi
 
-  read -r SCORE IP COUNTRY_CODE <<< "$(echo "$RESP" | jq -r '[.fraudScore // "", .ip // "", .countryCode // ""] | @tsv' 2>/dev/null)"
+  read -r SCORE IP COUNTRY_CODE ELAPSED <<< "$(echo "$RESP" | jq -r '[.fraudScore // "", .ip // "", .countryCode // "", .elapsed // 0] | @tsv' 2>/dev/null)"
+  ELAPSED="${ELAPSED:-0}"
 
   # get delay from cached data first, fallback to real-time test
   NODE_DELAY=$(echo "$NODE_MAP" | grep -m1 -F "$(printf '%s\t' "$node")" | cut -f3)
@@ -194,7 +198,7 @@ while IFS= read -r node; do
 
   if [[ -z "$SCORE" ]]; then
     printf "NO DATA\n"
-    RESULTS="${RESULTS}-1\t⚪\t${node}\t${IP:-?}\tNo Data\t${NODE_DELAY:--}\t-1\t-\n"
+    RESULTS="${RESULTS}-1\t⚪\t${node}\t${IP:-?}\tNo Data\t${NODE_DELAY:--}\t-1\t-\t0\n"
     continue
   fi
 
@@ -209,29 +213,37 @@ while IFS= read -r node; do
     ICON="🟢"
   fi
 
-  # calculate final score (weighted geometric mean + exponential delay decay)
+  # calculate final score (3-factor: fraud score + proxy delay + ippure latency)
   FINAL="-1"
-  if [[ -n "$NODE_DELAY" && "$NODE_DELAY" != "0" ]] && (( SCORE < FRAUD_THRESHOLD )); then
-    FINAL=$(echo "scale=4; f=(100-$SCORE)/100; d=e(-$NODE_DELAY/500); e($FRAUD_WEIGHT*l(f)+$DELAY_WEIGHT*l(d))" | bc -l)
+  if ([[ -n "$NODE_DELAY" && "$NODE_DELAY" != "0" ]] || [[ "$ELAPSED" != "0" && -n "$ELAPSED" ]]) && (( SCORE < FRAUD_THRESHOLD )); then
+    BC_EXPR="scale=4; s=$FRAUD_WEIGHT*l((100-$SCORE)/100)"
+    if [[ -n "$NODE_DELAY" && "$NODE_DELAY" != "0" ]]; then
+      BC_EXPR="$BC_EXPR - $DELAY_WEIGHT*$NODE_DELAY/500"
+    fi
+    if [[ "$ELAPSED" != "0" && -n "$ELAPSED" ]]; then
+      BC_EXPR="$BC_EXPR - $LATENCY_WEIGHT*$ELAPSED/2000"
+    fi
+    FINAL=$(echo "$BC_EXPR; e(s)" | bc -l)
   fi
 
   DELAY_STR="${NODE_DELAY:--}ms"
-  printf "%s %s (Score: %d, %s, %s, Final: %s)\n" "$ICON" "$IP" "$SCORE" "$RISK" "$DELAY_STR" "$FINAL"
-  RESULTS="${RESULTS}${SCORE}\t${ICON}\t${node}\t${IP}\t${RISK}\t${NODE_DELAY:--}\t${FINAL}\t${COUNTRY_CODE:--}\n"
+  ELAPSED_STR="${ELAPSED:-0}ms"
+  printf "%s %s (Score: %d, %s, %s, Latency: %s, Final: %s)\n" "$ICON" "$IP" "$SCORE" "$RISK" "$DELAY_STR" "$ELAPSED_STR" "$FINAL"
+  RESULTS="${RESULTS}${SCORE}\t${ICON}\t${node}\t${IP}\t${RISK}\t${NODE_DELAY:--}\t${FINAL}\t${COUNTRY_CODE:--}\t${ELAPSED:-0}\n"
 
 done <<< "$NODES"
 
 # print sorted summary
 echo ""
 echo "======================================== Summary ========================================="
-printf "     %-38s %-16s %5s  %-6s %7s  %6s\n" "Node" "IP" "Score" "Risk" "Delay" "Final"
-echo "──────────────────────────────────────────────────────────────────────────────────────────"
+printf "     %-38s %-16s %5s  %-6s %7s  %7s  %6s\n" "Node" "IP" "Score" "Risk" "Delay" "Latency" "Final"
+echo "────────────────────────────────────────────────────────────────────────────────────────────────"
 
 BEST_NODE=""
 BEST_FINAL="-1"
 
 SORTED=$(printf '%b' "$RESULTS" | sort -t$'\t' -k7 -g -r)
-echo "$SORTED" | while IFS=$'\t' read -r score icon node ip risk delay final cc; do
+echo "$SORTED" | while IFS=$'\t' read -r score icon node ip risk delay final cc elapsed; do
   if [[ "$delay" == "-" ]]; then
     delay_str="   -"
   else
@@ -242,13 +254,18 @@ echo "$SORTED" | while IFS=$'\t' read -r score icon node ip risk delay final cc;
   else
     final_str="$final"
   fi
+  if [[ -z "$elapsed" || "$elapsed" == "0" ]]; then
+    elapsed_str="   -"
+  else
+    elapsed_str="${elapsed}ms"
+  fi
   if [[ "$cc" != "-" && -n "$cc" ]]; then
     display_node="[$cc]$node"
   else
     display_node="$node"
   fi
   node_padded=$(pad_right "$icon $display_node" 42)
-  printf '%s %-16s %5s  %-6s %7s  %6s\n' "$node_padded" "$ip" "$score" "$risk" "$delay_str" "$final_str"
+  printf '%s %-16s %5s  %-6s %7s  %7s  %6s\n' "$node_padded" "$ip" "$score" "$risk" "$delay_str" "$elapsed_str" "$final_str"
 done
 
 # find best node (outside subshell)
@@ -256,7 +273,7 @@ BEST_LINE=$(echo "$SORTED" | head -1)
 BEST_FINAL=$(echo "$BEST_LINE" | cut -d$'\t' -f7)
 BEST_NODE=$(echo "$BEST_LINE" | cut -d$'\t' -f3)
 
-echo "──────────────────────────────────────────────────────────────────────────────────────────"
+echo "────────────────────────────────────────────────────────────────────────────────────────────────"
 
 if [[ "$BEST_FINAL" == "-1" || -z "$BEST_NODE" ]]; then
   echo ""
