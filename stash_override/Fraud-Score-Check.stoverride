@@ -1,5 +1,5 @@
-name: Fraud Score Check
-icon: https://ippure.com/logo.png
+name: Node Scout
+icon: https://cdn.jsdelivr.net/npm/@tabler/icons/icons/shield-search.svg
 desc: 提供本地 HTTP 接口，通过指定节点查询 IP fraud score
 category: tile
 
@@ -7,7 +7,7 @@ tiles:
   - name: NodeScout
     title: "Node Scout"
     content: "IP 欺诈评分批量检测"
-    icon: https://ippure.com/logo.png
+    icon: https://cdn.jsdelivr.net/npm/@tabler/icons/icons/shield-search.svg
     backgroundColor: "#1a1a1a"
     collapsed: false
     url: "http://fraud-check.stash/"
