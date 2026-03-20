@@ -16,8 +16,6 @@ DIR=$(echo "$input" | jq -r '.workspace.current_dir // "."')
 DIR_NAME="${DIR##*/}"
 COST=$(echo "$input" | jq -r '.cost.total_cost_usd // 0')
 DURATION_MS=$(echo "$input" | jq -r '.cost.total_duration_ms // 0')
-LINES_ADDED=$(echo "$input" | jq -r '.cost.total_lines_added // 0')
-LINES_REMOVED=$(echo "$input" | jq -r '.cost.total_lines_removed // 0')
 PCT=$(echo "$input" | jq -r '.context_window.used_percentage // 0' | cut -d. -f1)
 CTX_SIZE=$(echo "$input" | jq -r '.context_window.context_window_size // 200000')
 INPUT_TOKENS=$(echo "$input" | jq -r '.context_window.total_input_tokens // 0')
@@ -71,21 +69,30 @@ fi
 # Cost
 COST_FMT=$(printf '$%.2f' "$COST")
 
-# Git branch & file count
+# Git branch & diff stats
 BRANCH=""
 FILE_COUNT=0
+DIFF_ADD=0
+DIFF_DEL=0
 if git rev-parse --git-dir > /dev/null 2>&1; then
     BRANCH=$(git branch --show-current 2>/dev/null)
-    FILE_COUNT=$(git diff --name-only HEAD 2>/dev/null | wc -l | tr -d ' ')
+    SHORTSTAT=$(git diff --shortstat HEAD 2>/dev/null)
+    FILE_COUNT=$(echo "$SHORTSTAT" | grep -oE '[0-9]+ file' | grep -oE '[0-9]+')
+    DIFF_ADD=$(echo "$SHORTSTAT" | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+')
+    DIFF_DEL=$(echo "$SHORTSTAT" | grep -oE '[0-9]+ deletion' | grep -oE '[0-9]+')
+    FILE_COUNT=${FILE_COUNT:-0}
+    DIFF_ADD=${DIFF_ADD:-0}
+    DIFF_DEL=${DIFF_DEL:-0}
 fi
 
-# Build single line
-LINE="${CYAN}[${MODEL}]${RESET} 📁 ${DIR_NAME}"
-[ -n "$BRANCH" ] && LINE="${LINE} ${DIM}|${RESET} 🔀 ${GREEN}${BRANCH}${RESET}"
-LINE="${LINE} ${DIM}|${RESET} ${DIM}↑${SEND_FMT} ↓${RECV_FMT}${RESET}"
-LINE="${LINE} ${DIM}|${RESET} ${BAR} ${BAR_COLOR}${PCT}%${RESET} ${DIM}(${USED_FMT}/${CTX_FMT})${RESET}"
-LINE="${LINE} ${DIM}|${RESET} ${YELLOW}${COST_FMT}${RESET}"
-LINE="${LINE} ${DIM}|${RESET} ${DIM}⏱ ${DURATION_FMT}${RESET}"
-LINE="${LINE} ${DIM}|${RESET} ${FILE_COUNT} files ${GREEN}+${LINES_ADDED}${RESET} ${RED}-${LINES_REMOVED}${RESET}"
+# Build two lines
+LINE1="${CYAN}[${MODEL}]${RESET} 📁 ${DIR_NAME}"
+[ -n "$BRANCH" ] && LINE1="${LINE1} ${DIM}|${RESET} 🔀 ${GREEN}${BRANCH}${RESET}"
+LINE1="${LINE1} ${DIM}|${RESET} ${FILE_COUNT} files ${GREEN}+${DIFF_ADD}${RESET} ${RED}-${DIFF_DEL}${RESET}"
 
-echo -e "$LINE"
+LINE2="${BAR} ${BAR_COLOR}${PCT}%${RESET} ${DIM}(${USED_FMT}/${CTX_FMT})${RESET}"
+LINE2="${LINE2} ${DIM}|${RESET} ${DIM}↑${SEND_FMT} ↓${RECV_FMT}${RESET}"
+LINE2="${LINE2} ${DIM}|${RESET} ${YELLOW}${COST_FMT}${RESET}"
+LINE2="${LINE2} ${DIM}|${RESET} ${DIM}⏱ ${DURATION_FMT}${RESET}"
+
+echo -e "${LINE1}\n${LINE2}"
