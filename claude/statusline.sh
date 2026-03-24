@@ -112,7 +112,7 @@ COST_FMT=$(printf '$%.2f' "$COST")
 
 # Rate limits
 if [ -n "$FIVE_H_PCT" ]; then
-    FIVE_H_PCT_INT=${FIVE_H_PCT%.*}
+    FIVE_H_PCT_INT=$(printf '%.0f' "$FIVE_H_PCT")
     FIVE_H_BAR=$(make_bar "$FIVE_H_PCT_INT" 10)
     FIVE_H_COLOR=$(bar_color "$FIVE_H_PCT_INT")
     FIVE_H_REMAINING=$(fmt_remaining "$FIVE_H_RESET")
@@ -123,7 +123,7 @@ else
 fi
 
 if [ -n "$SEVEN_D_PCT" ]; then
-    SEVEN_D_PCT_INT=${SEVEN_D_PCT%.*}
+    SEVEN_D_PCT_INT=$(printf '%.0f' "$SEVEN_D_PCT")
     SEVEN_D_BAR=$(make_bar "$SEVEN_D_PCT_INT" 10)
     SEVEN_D_COLOR=$(bar_color "$SEVEN_D_PCT_INT")
     SEVEN_D_REMAINING=$(fmt_remaining "$SEVEN_D_RESET")
