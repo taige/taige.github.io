@@ -20,6 +20,10 @@ PCT=$(echo "$input" | jq -r '.context_window.used_percentage // 0' | cut -d. -f1
 CTX_SIZE=$(echo "$input" | jq -r '.context_window.context_window_size // 200000')
 INPUT_TOKENS=$(echo "$input" | jq -r '.context_window.total_input_tokens // 0')
 OUTPUT_TOKENS=$(echo "$input" | jq -r '.context_window.total_output_tokens // 0')
+FIVE_H_PCT=$(echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // empty')
+FIVE_H_RESET=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')
+SEVEN_D_PCT=$(echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // empty')
+SEVEN_D_RESET=$(echo "$input" | jq -r '.rate_limits.seven_day.resets_at // empty')
 
 # Format token counts
 fmt_tokens() {
@@ -39,20 +43,57 @@ USED=$(( PCT * CTX_SIZE / 100 ))
 USED_FMT=$(fmt_tokens "$USED")
 CTX_FMT=$(fmt_tokens "$CTX_SIZE")
 
-# Progress bar (20 chars)
-BAR_WIDTH=20
-FILLED=$((PCT * BAR_WIDTH / 100))
-EMPTY=$((BAR_WIDTH - FILLED))
+# Progress bar generator: make_bar <pct> <width>
+make_bar() {
+    local pct=$1 width=$2
+    local filled=$((pct * width / 100))
+    local empty=$((width - filled))
+    local color
+    if [ "$pct" -ge 90 ]; then color="$RED"
+    elif [ "$pct" -ge 75 ]; then color="$ORANGE"
+    elif [ "$pct" -ge 50 ]; then color="$YELLOW"
+    else color="$GREEN"; fi
+    local fill_str="" empty_str=""
+    [ "$filled" -gt 0 ] && fill_str=$(printf "%${filled}s" | tr ' ' '█')
+    [ "$empty" -gt 0 ] && empty_str=$(printf "%${empty}s" | tr ' ' '░')
+    echo "${color}${fill_str}${DIM}${empty_str}${RESET}"
+}
 
-if [ "$PCT" -ge 90 ]; then BAR_COLOR="$RED"
-elif [ "$PCT" -ge 75 ]; then BAR_COLOR="$ORANGE"
-elif [ "$PCT" -ge 50 ]; then BAR_COLOR="$YELLOW"
-else BAR_COLOR="$GREEN"; fi
+# Bar color for percentage
+bar_color() {
+    local pct=$1
+    if [ "$pct" -ge 90 ]; then echo "$RED"
+    elif [ "$pct" -ge 75 ]; then echo "$ORANGE"
+    elif [ "$pct" -ge 50 ]; then echo "$YELLOW"
+    else echo "$GREEN"; fi
+}
 
-FILL_STR=""; EMPTY_STR=""
-[ "$FILLED" -gt 0 ] && FILL_STR=$(printf "%${FILLED}s" | tr ' ' '█')
-[ "$EMPTY" -gt 0 ] && EMPTY_STR=$(printf "%${EMPTY}s" | tr ' ' '░')
-BAR="${BAR_COLOR}${FILL_STR}${DIM}${EMPTY_STR}${RESET}"
+# Format remaining time from epoch: fmt_remaining <epoch>
+fmt_remaining() {
+    local epoch=$1
+    [ -z "$epoch" ] && return
+    local now remaining
+    now=$(date +%s)
+    remaining=$((epoch - now))
+    [ "$remaining" -le 0 ] && echo "0m" && return
+    local days=$((remaining / 86400))
+    if [ "$days" -ge 1 ]; then
+        local hours=$(( (remaining % 86400) / 3600 ))
+        echo "${days}d${hours}h"
+    else
+        local hours=$((remaining / 3600))
+        local mins=$(( (remaining % 3600) / 60 ))
+        if [ "$hours" -gt 0 ]; then
+            echo "${hours}h${mins}m"
+        else
+            echo "${mins}m"
+        fi
+    fi
+}
+
+# Context window bar
+BAR=$(make_bar "$PCT" 20)
+BAR_COLOR=$(bar_color "$PCT")
 
 # Duration
 DURATION_SEC=$((DURATION_MS / 1000))
@@ -68,6 +109,29 @@ fi
 
 # Cost
 COST_FMT=$(printf '$%.2f' "$COST")
+
+# Rate limits
+if [ -n "$FIVE_H_PCT" ]; then
+    FIVE_H_PCT_INT=${FIVE_H_PCT%.*}
+    FIVE_H_BAR=$(make_bar "$FIVE_H_PCT_INT" 10)
+    FIVE_H_COLOR=$(bar_color "$FIVE_H_PCT_INT")
+    FIVE_H_REMAINING=$(fmt_remaining "$FIVE_H_RESET")
+    FIVE_H_FMT="5h ${FIVE_H_BAR} ${FIVE_H_COLOR}${FIVE_H_PCT_INT}%${RESET}"
+    [ -n "$FIVE_H_REMAINING" ] && FIVE_H_FMT="${FIVE_H_FMT} ${DIM}(${FIVE_H_REMAINING})${RESET}"
+else
+    FIVE_H_FMT="${DIM}5h --${RESET}"
+fi
+
+if [ -n "$SEVEN_D_PCT" ]; then
+    SEVEN_D_PCT_INT=${SEVEN_D_PCT%.*}
+    SEVEN_D_BAR=$(make_bar "$SEVEN_D_PCT_INT" 10)
+    SEVEN_D_COLOR=$(bar_color "$SEVEN_D_PCT_INT")
+    SEVEN_D_REMAINING=$(fmt_remaining "$SEVEN_D_RESET")
+    SEVEN_D_FMT="7d ${SEVEN_D_BAR} ${SEVEN_D_COLOR}${SEVEN_D_PCT_INT}%${RESET}"
+    [ -n "$SEVEN_D_REMAINING" ] && SEVEN_D_FMT="${SEVEN_D_FMT} ${DIM}(${SEVEN_D_REMAINING})${RESET}"
+else
+    SEVEN_D_FMT="${DIM}7d --${RESET}"
+fi
 
 # Git branch & diff stats
 BRANCH=""
@@ -93,6 +157,9 @@ LINE1="${LINE1} ${DIM}|${RESET} ${FILE_COUNT} files ${GREEN}+${DIFF_ADD}${RESET}
 LINE2="${BAR} ${BAR_COLOR}${PCT}%${RESET} ${DIM}(${USED_FMT}/${CTX_FMT})${RESET}"
 LINE2="${LINE2} ${DIM}|${RESET} ${DIM}↑${SEND_FMT} ↓${RECV_FMT}${RESET}"
 LINE2="${LINE2} ${DIM}|${RESET} ${YELLOW}${COST_FMT}${RESET}"
-LINE2="${LINE2} ${DIM}|${RESET} ${DIM}⏱ ${DURATION_FMT}${RESET}"
+# Uncomment to show duration:
+# LINE2="${LINE2} ${DIM}|${RESET} ${DIM}⏱ ${DURATION_FMT}${RESET}"
+LINE2="${LINE2} ${DIM}|${RESET} ${FIVE_H_FMT}"
+LINE2="${LINE2} ${DIM}|${RESET} ${SEVEN_D_FMT}"
 
 echo -e "${LINE1}\n${LINE2}"
