@@ -77,11 +77,11 @@ make_rate_bar() {
     # Clamp time_pos
     [ "$time_pos" -lt 0 ] && time_pos=0
     [ "$time_pos" -ge "$width" ] && time_pos=$((width - 1))
-    # Color based on usage vs time
+    # Color based on usage vs time (cap at yellow when usage < 50%)
     local color
     if [ "$usage_pct" -ge 90 ]; then color="$RED"
     elif [ "$time_pct" -le 0 ] || [ "$usage_pct" -le "$time_pct" ]; then color="$GREEN"
-    elif [ "$usage_pct" -le $((time_pct * 3 / 2)) ]; then color="$YELLOW"
+    elif [ "$usage_pct" -lt 50 ] || [ "$usage_pct" -le $((time_pct * 3 / 2)) ]; then color="$YELLOW"
     else color="$ORANGE"; fi
     # Build bar char by char
     local bar="" i
@@ -102,7 +102,7 @@ rate_bar_color() {
     local usage_pct=$1 time_pct=$2
     if [ "$usage_pct" -ge 90 ]; then echo "$RED"
     elif [ "$time_pct" -le 0 ] || [ "$usage_pct" -le "$time_pct" ]; then echo "$GREEN"
-    elif [ "$usage_pct" -le $((time_pct * 3 / 2)) ]; then echo "$YELLOW"
+    elif [ "$usage_pct" -lt 50 ] || [ "$usage_pct" -le $((time_pct * 3 / 2)) ]; then echo "$YELLOW"
     else echo "$ORANGE"; fi
 }
 
