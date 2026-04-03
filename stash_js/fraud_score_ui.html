@@ -110,7 +110,7 @@ label {
   flex-shrink: 0;
 }
 
-select, input[type="number"] {
+select, input[type="number"], input[type="text"] {
   flex: 1;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -333,16 +333,19 @@ input[type="number"] { width: 100px; flex: none; }
 }
 
 .setting-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
   align-items: center;
-  justify-content: space-between;
-  padding: 14px 0;
+  gap: 0 12px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--fg-subtle);
 }
 
 .setting-row:last-child { border-bottom: none; }
-.setting-row label { flex-shrink: 0; }
-.setting-row input { width: 120px; text-align: right; flex: none; }
+.setting-row label { grid-column: 1; grid-row: 1; }
+.setting-row input { width: 120px; text-align: right; grid-column: 2; grid-row: 1 / 3; }
+.setting-desc { color: var(--text-dim); font-size: 11px; grid-column: 1; grid-row: 2; margin-top: 2px; }
 
 /* --- Bottom nav --- */
 .bottom-nav {
@@ -474,28 +477,32 @@ input[type="number"] { width: 100px; flex: none; }
   <div class="tab-content" id="tabSettings">
     <div class="settings-card">
       <div class="setting-row">
-        <label>PORT</label>
-        <input type="number" id="port" value="9090" min="1" max="65535">
+        <label>TIMEOUT</label><input type="number" id="timeout" value="3" min="1" max="30">
+        <div class="setting-desc">Per-node check timeout (sec)</div>
       </div>
       <div class="setting-row">
-        <label>TIMEOUT</label>
-        <input type="number" id="timeout" value="3" min="1" max="30">
+        <label>THRESHOLD</label><input type="number" id="threshold" value="70" min="0" max="100">
+        <div class="setting-desc">Score >= this is high risk, excluded from best</div>
       </div>
       <div class="setting-row">
-        <label>THRESHOLD</label>
-        <input type="number" id="threshold" value="70" min="0" max="100">
+        <label>FRAUD WEIGHT</label><input type="number" id="fraudWeight" value="0.5" min="0" max="1" step="0.1">
+        <div class="setting-desc">Fraud score weight in final ranking</div>
       </div>
       <div class="setting-row">
-        <label>FRAUD WEIGHT</label>
-        <input type="number" id="fraudWeight" value="0.5" min="0" max="1" step="0.1">
+        <label>DELAY WEIGHT</label><input type="number" id="delayWeight" value="0.3" min="0" max="1" step="0.1">
+        <div class="setting-desc">Node delay weight in final ranking</div>
       </div>
       <div class="setting-row">
-        <label>DELAY WEIGHT</label>
-        <input type="number" id="delayWeight" value="0.3" min="0" max="1" step="0.1">
+        <label>LATENCY WEIGHT</label><input type="number" id="latencyWeight" value="0.2" min="0" max="1" step="0.1">
+        <div class="setting-desc">Request latency weight in final ranking</div>
       </div>
       <div class="setting-row">
-        <label>LATENCY WEIGHT</label>
-        <input type="number" id="latencyWeight" value="0.2" min="0" max="1" step="0.1">
+        <label>PORT</label><input type="number" id="port" value="9090" min="1" max="65535">
+        <div class="setting-desc">RESTful API port (Settings > HTTP API)</div>
+      </div>
+      <div class="setting-row">
+        <label>SECRET</label><input type="text" id="secret" value="" placeholder="bearer token">
+        <div class="setting-desc">API key for external controller (blank = no auth)</div>
       </div>
     </div>
   </div>
@@ -523,6 +530,34 @@ let autoSelectEnabled = false;
 function apiBase() {
   return 'http://127.0.0.1:' + document.getElementById('port').value;
 }
+
+function apiHeaders() {
+  var s = document.getElementById('secret').value;
+  return s ? { 'Authorization': 'Bearer ' + s } : {};
+}
+
+// --- Settings persistence ---
+var SETTINGS_KEY = 'nodeScoutSettings';
+var SETTING_IDS = ['port', 'timeout', 'threshold', 'fraudWeight', 'delayWeight', 'latencyWeight', 'secret'];
+
+function saveSettings() {
+  var o = {};
+  SETTING_IDS.forEach(function(id) { o[id] = document.getElementById(id).value; });
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(o)); } catch(e) {}
+}
+
+function loadSettings() {
+  try {
+    var o = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    if (!o) return;
+    SETTING_IDS.forEach(function(id) { if (o[id] != null) document.getElementById(id).value = o[id]; });
+  } catch(e) {}
+}
+
+// Auto-save on input change
+SETTING_IDS.forEach(function(id) {
+  document.getElementById(id).addEventListener('change', saveSettings);
+});
 
 function setStatus(msg) {
   document.getElementById('status').textContent = msg;
@@ -567,10 +602,14 @@ function updateAutoSelectState() {
 // --- Load groups (auto on page load) ---
 
 async function loadGroups() {
-  setStatus('Loading proxies...');
+  const apiUrl = apiBase() + '/proxies';
+  setStatus('Fetching ' + apiUrl + '...');
   try {
-    const resp = await fetch(apiBase() + '/proxies');
-    allProxies = await resp.json();
+    const resp = await fetch(apiUrl, { headers: apiHeaders() });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' from ' + apiUrl);
+    const rawText = await resp.text();
+    try { allProxies = JSON.parse(rawText); } catch(pe) { throw new Error('Invalid JSON: ' + rawText.substring(0, 200)); }
+    if (!allProxies || !allProxies.proxies) throw new Error('No .proxies key. Keys: ' + Object.keys(allProxies || {}).join(',') + ' | ' + rawText.substring(0, 100));
 
     const sel = document.getElementById('group');
     sel.innerHTML = '';
@@ -647,7 +686,7 @@ async function fetchDelay(nodeName, cachedDelay, signal) {
     const resp = await fetch(
       apiBase() + '/proxies/' + encodeURIComponent(nodeName) +
       '/delay?timeout=5000&url=http://cp.cloudflare.com/generate_204',
-      { signal }
+      { signal, headers: apiHeaders() }
     );
     const data = await resp.json();
     return data.delay || 0;
@@ -831,7 +870,7 @@ async function startCheck() {
   const banner = document.getElementById('bestBanner');
   if (best) {
     const riskText = best.score != null ? (best.score >= 70 ? 'High' : best.score >= 40 ? 'Medium' : 'Low') : '-';
-    banner.querySelector('.best-banner-title').textContent = '\u2605 Best: ' + best.node;
+    banner.querySelector('.best-banner-title').textContent = '\★ Best: ' + best.node;
     const scoreVal = best.score != null ? best.score : '-';
     const delayVal = best.delay > 0 ? best.delay + 'ms' : '-';
     const elapsedVal = best.elapsed > 0 ? best.elapsed + 'ms' : '-';
@@ -856,11 +895,11 @@ async function startCheck() {
       try {
         const putResp = await fetch(apiBase() + '/proxies/' + encodeURIComponent(group), {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: Object.assign({ 'Content-Type': 'application/json' }, apiHeaders()),
           body: JSON.stringify({ name: selectTarget })
         });
         if (putResp.ok || putResp.status === 204) {
-          banner.querySelector('.best-banner-switch').textContent = '\u2713 Switched \u2192 ' + selectTarget;
+          banner.querySelector('.best-banner-switch').textContent = '\✓ Switched \→ ' + selectTarget;
         } else {
           banner.querySelector('.best-banner-switch').textContent = 'Switch failed: HTTP ' + putResp.status;
         }
@@ -888,7 +927,7 @@ function stopCheck() {
 }
 
 // Auto-load on page open
-window.addEventListener('load', loadGroups);
+window.addEventListener('load', function() { loadSettings(); loadGroups(); });
 </script>
 </body>
 </html>
