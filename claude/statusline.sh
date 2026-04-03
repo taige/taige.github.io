@@ -68,6 +68,44 @@ bar_color() {
     else echo "$GREEN"; fi
 }
 
+# Rate limit bar with time marker: make_rate_bar <usage_pct> <time_pct> <width>
+# Shows usage fill + │ marker at time position to visualize pace
+make_rate_bar() {
+    local usage_pct=$1 time_pct=$2 width=$3
+    local usage_pos=$((usage_pct * width / 100))
+    local time_pos=$((time_pct * width / 100))
+    # Clamp time_pos
+    [ "$time_pos" -lt 0 ] && time_pos=0
+    [ "$time_pos" -ge "$width" ] && time_pos=$((width - 1))
+    # Color based on usage vs time
+    local color
+    if [ "$usage_pct" -ge 90 ]; then color="$RED"
+    elif [ "$time_pct" -le 0 ] || [ "$usage_pct" -le "$time_pct" ]; then color="$GREEN"
+    elif [ "$usage_pct" -le $((time_pct * 3 / 2)) ]; then color="$YELLOW"
+    else color="$ORANGE"; fi
+    # Build bar char by char
+    local bar="" i
+    for ((i=0; i<width; i++)); do
+        if [ "$i" -eq "$time_pos" ]; then
+            bar="${bar}${RESET}${DIM}│${RESET}"
+        elif [ "$i" -lt "$usage_pos" ]; then
+            bar="${bar}█"
+        else
+            bar="${bar}░"
+        fi
+    done
+    echo "${color}${bar}${RESET}"
+}
+
+# Rate limit bar color based on usage vs time
+rate_bar_color() {
+    local usage_pct=$1 time_pct=$2
+    if [ "$usage_pct" -ge 90 ]; then echo "$RED"
+    elif [ "$time_pct" -le 0 ] || [ "$usage_pct" -le "$time_pct" ]; then echo "$GREEN"
+    elif [ "$usage_pct" -le $((time_pct * 3 / 2)) ]; then echo "$YELLOW"
+    else echo "$ORANGE"; fi
+}
+
 # Format remaining time from epoch: fmt_remaining <epoch>
 fmt_remaining() {
     local epoch=$1
@@ -111,11 +149,21 @@ fi
 COST_FMT=$(printf '$%.2f' "$COST")
 
 # Rate limits
+NOW=$(date +%s)
+
 if [ -n "$FIVE_H_PCT" ]; then
     FIVE_H_PCT_INT=$(printf '%.0f' "$FIVE_H_PCT")
-    FIVE_H_BAR=$(make_bar "$FIVE_H_PCT_INT" 10)
-    FIVE_H_COLOR=$(bar_color "$FIVE_H_PCT_INT")
     FIVE_H_REMAINING=$(fmt_remaining "$FIVE_H_RESET")
+    if [ -n "$FIVE_H_RESET" ]; then
+        FIVE_H_TIME_PCT=$(( (18000 - (FIVE_H_RESET - NOW)) * 100 / 18000 ))
+        [ "$FIVE_H_TIME_PCT" -lt 0 ] && FIVE_H_TIME_PCT=0
+        [ "$FIVE_H_TIME_PCT" -gt 100 ] && FIVE_H_TIME_PCT=100
+        FIVE_H_BAR=$(make_rate_bar "$FIVE_H_PCT_INT" "$FIVE_H_TIME_PCT" 10)
+        FIVE_H_COLOR=$(rate_bar_color "$FIVE_H_PCT_INT" "$FIVE_H_TIME_PCT")
+    else
+        FIVE_H_BAR=$(make_bar "$FIVE_H_PCT_INT" 10)
+        FIVE_H_COLOR=$(bar_color "$FIVE_H_PCT_INT")
+    fi
     FIVE_H_FMT="5h ${FIVE_H_BAR} ${FIVE_H_COLOR}${FIVE_H_PCT_INT}%${RESET}"
     [ -n "$FIVE_H_REMAINING" ] && FIVE_H_FMT="${FIVE_H_FMT} ${DIM}(${FIVE_H_REMAINING})${RESET}"
 else
@@ -124,9 +172,17 @@ fi
 
 if [ -n "$SEVEN_D_PCT" ]; then
     SEVEN_D_PCT_INT=$(printf '%.0f' "$SEVEN_D_PCT")
-    SEVEN_D_BAR=$(make_bar "$SEVEN_D_PCT_INT" 10)
-    SEVEN_D_COLOR=$(bar_color "$SEVEN_D_PCT_INT")
     SEVEN_D_REMAINING=$(fmt_remaining "$SEVEN_D_RESET")
+    if [ -n "$SEVEN_D_RESET" ]; then
+        SEVEN_D_TIME_PCT=$(( (604800 - (SEVEN_D_RESET - NOW)) * 100 / 604800 ))
+        [ "$SEVEN_D_TIME_PCT" -lt 0 ] && SEVEN_D_TIME_PCT=0
+        [ "$SEVEN_D_TIME_PCT" -gt 100 ] && SEVEN_D_TIME_PCT=100
+        SEVEN_D_BAR=$(make_rate_bar "$SEVEN_D_PCT_INT" "$SEVEN_D_TIME_PCT" 10)
+        SEVEN_D_COLOR=$(rate_bar_color "$SEVEN_D_PCT_INT" "$SEVEN_D_TIME_PCT")
+    else
+        SEVEN_D_BAR=$(make_bar "$SEVEN_D_PCT_INT" 10)
+        SEVEN_D_COLOR=$(bar_color "$SEVEN_D_PCT_INT")
+    fi
     SEVEN_D_FMT="7d ${SEVEN_D_BAR} ${SEVEN_D_COLOR}${SEVEN_D_PCT_INT}%${RESET}"
     [ -n "$SEVEN_D_REMAINING" ] && SEVEN_D_FMT="${SEVEN_D_FMT} ${DIM}(${SEVEN_D_REMAINING})${RESET}"
 else
