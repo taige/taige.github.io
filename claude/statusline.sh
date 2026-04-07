@@ -177,10 +177,10 @@ if [ -n "$SEVEN_D_PCT" ]; then
         SEVEN_D_TIME_PCT=$(( (604800 - (SEVEN_D_RESET - NOW)) * 100 / 604800 ))
         [ "$SEVEN_D_TIME_PCT" -lt 0 ] && SEVEN_D_TIME_PCT=0
         [ "$SEVEN_D_TIME_PCT" -gt 100 ] && SEVEN_D_TIME_PCT=100
-        SEVEN_D_BAR=$(make_rate_bar "$SEVEN_D_PCT_INT" "$SEVEN_D_TIME_PCT" 10)
+        SEVEN_D_BAR=$(make_rate_bar "$SEVEN_D_PCT_INT" "$SEVEN_D_TIME_PCT" 14)
         SEVEN_D_COLOR=$(rate_bar_color "$SEVEN_D_PCT_INT" "$SEVEN_D_TIME_PCT")
     else
-        SEVEN_D_BAR=$(make_bar "$SEVEN_D_PCT_INT" 10)
+        SEVEN_D_BAR=$(make_bar "$SEVEN_D_PCT_INT" 14)
         SEVEN_D_COLOR=$(bar_color "$SEVEN_D_PCT_INT")
     fi
     SEVEN_D_FMT="7d ${SEVEN_D_BAR} ${SEVEN_D_COLOR}${SEVEN_D_PCT_INT}%${RESET}"
