@@ -87,7 +87,7 @@ make_rate_bar() {
     local bar="" i
     for ((i=0; i<width; i++)); do
         if [ "$i" -eq "$time_pos" ]; then
-            bar="${bar}${RESET}${DIM}│${RESET}"
+            bar="${bar}${RESET}${DIM}│${RESET}${color}"
         elif [ "$i" -lt "$usage_pos" ]; then
             bar="${bar}█"
         else
